@@ -13,8 +13,8 @@
 
 \newcommand{\tbd}{\textcolor{red}{?}}
 
-\title{\Large \textbf{어텐션은 허우적대고 있었다. 이제 어디를 봐야 하는지 안다.} \\[0.3em]
-\large 상태 공간 역학의 소프트맥스 어텐션 스코어 수준 융합}
+\title{\Large \textbf{Attention Was Drowning. Now It Knows Where to Look.} \\[0.3em]
+\large 상태 공간 역학의 Softmax Attention Score 수준 융합}
 
 \author{Anonymous Authors}
 \date{}
@@ -26,11 +26,11 @@
 % 초록
 % ============================================================
 \begin{abstract}
-트랜스포머의 어텐션은 모든 토큰을 동등하게 바라본 뒤, 그중 중요한 것을 골라내는 법을 학습한다. 상태 공간 모델(SSM)은 읽어가면서 무엇이 중요한지 추적하지만, 한번 버린 정보는 되돌릴 수 없다. 서로의 약점을 보완할 수 있는 두 구조임에도, 기존의 하이브리드 아키텍처는 이 둘을 항상 따로 돌린 뒤 결과만 합쳐왔다.
+Transformer의 attention은 시퀀스 내 모든 토큰을 본다. 그래서 어디든 찾아갈 수 있지만, 정작 어디를 봐야 하는지는 학습에 맡긴다. SSM(State Space Model)은 읽어가며 중요한 것을 추적하지만, 한번 지나친 정보는 다시 꺼내지 못한다. 둘을 합치려는 시도는 많았다. Jamba는 레이어를 번갈아 쌓았고, Hymba는 같은 레이어에서 헤드를 나누었다. 그러나 어느 방식이든 두 연산은 각자 따로 돌아간 뒤 결과만 합쳐질 뿐, 연산 도중에 서로를 참조하지는 않는다.
 
-본 논문에서는 \textbf{SISA}(SSM-Informed Softmax Attention)를 제안한다. SISA에서 SSM 신호는 소프트맥스 \emph{이전에} 어텐션 스코어에 직접 주입된다. 모든 어텐션 스코어가 ``이 토큰이 유사한가?''와 ``이 토큰이 맥락상 중요한가?''를 하나의 내적으로 동시에 판단한다. 별도의 SSM 브랜치도, 출력 단계의 결합도 필요 없다---유사도와 중요도를 한 번의 연산으로 끝낸다.
+\textbf{SISA}(SSM-Informed Softmax Attention)는 다른 길을 간다. SSM 신호를 softmax 이전, attention score 안에 직접 넣는다. 하나의 내적이 ``이 토큰이 쿼리와 비슷한가?''와 ``이 토큰이 시퀀스 흐름상 중요한가?''를 동시에 계산한다. 별도 SSM 모듈도, 출력 단의 결합도 없이, SDPA 한 번으로 끝난다.
 
-152M 파라미터, 5B 토큰 학습 조건에서 SISA는 학습 시작 10\% 시점부터 정보 검색(NIAH) 정확도 100\%를 달성한다. 같은 시점에서 트랜스포머는 61\%, Mamba-2는 0\%다. 학습 완료 시점에서 SISA는 LAMBADA에서 트랜스포머 대비 +16\%, 나머지 네 개 벤치마크에서도 동등 이상의 성능을 보이며, Mamba-3 대비 1.9배 높은 처리량을 기록한다. 특히 SISA는 트랜스포머가 전체 학습을 마치고 도달하는 성능을 절반의 토큰만으로 달성하는데, 이는 어텐션에게 \emph{어디를 봐야 하는지} 알려주는 것이 스스로 알아내게 하는 것보다 훨씬 효율적임을 시사한다.
+152M 파라미터를 5B 토큰으로 학습한 결과, SISA는 전체 학습의 10\%만 진행된 시점에서 NIAH(Needle-In-A-Haystack) 정확도 100\%를 기록한다. 같은 시점 Transformer는 61\%, Mamba-2는 0\%다. 학습이 끝나면 LAMBADA에서 Transformer 대비 +16\%, 나머지 네 벤치마크에서도 동등 이상이며, Mamba-3 대비 처리량은 1.9배다. 주목할 점은 SISA가 Transformer 최종 성능에 절반의 토큰만으로 도달한다는 것이다. Attention에게 ``어디를 봐''라고 한마디 해주는 것이, 혼자 알아내게 두는 것보다 훨씬 빠르다.
 \end{abstract}
 
 % ============================================================
@@ -38,79 +38,81 @@
 % ============================================================
 \section{서론}
 
-다음 문장을 생각해보자. ``2019년 베를린으로 이사한 음악가가 3년간 음악원에서 공부한 끝에, 자신이 \underline{\hspace{1cm}} 도시에서 첫 협주곡을 연주했다.'' 빈칸에 ``살던''을 넣으려면, 모델은 수많은 토큰 사이에서 ``베를린으로 이사한''이라는 단 하나의 단서를 찾아내야 한다. 트랜스포머의 셀프 어텐션은 모든 위치에 대해 스코어를 계산하고, 그중 ``베를린''이 중요하다는 사실을 순전히 내용 유사도만으로 발견해야 한다. 할 수는 있지만, 배우는 데 시간이 걸린다. 그 사이 어텐션은 똑같이 그럴듯한 수많은 토큰의 바다에서 허우적댄다.
+``2019년 베를린으로 이사한 음악가가 3년간 음악원에서 수학한 뒤, 자신이 \underline{\hspace{1cm}} 도시에서 첫 협주곡을 연주했다.''
 
-상태 공간 모델은 근본적으로 다른 접근을 취한다. Mamba~\citep{gu2023mamba}는 토큰을 하나씩 읽어가면서 얼마나 기억하고 얼마나 잊을지 결정하며, 시퀀스를 고정 크기의 상태로 압축한다. 효율적이고, 패턴 인식에서 놀라울 만큼 강력하다. 하지만 이것은 일방통행이다. 50번째 위치에서 중요하지 않다고 판단한 토큰은, 500번째 위치에서 필요해져도 되돌릴 수 없다. 그 정보는 이미 사라졌다.
+빈칸에 ``살던''을 넣으려면 모델은 수많은 토큰 속에서 ``베를린으로 이사한''이라는 단서 하나를 골라내야 한다. Transformer의 self-attention은 모든 위치에 대해 score를 매기고, 그중 ``베를린''의 관련성을 오직 내용 유사도(content similarity)만으로 파악해야 한다. 할 수는 있다. 하지만 그것을 \emph{배우기} 전까지, attention은 비슷비슷하게 그럴듯한 토큰들의 바다에서 허우적댄다.
 
-이 두 구조의 장점을 합치려는 시도는 활발하다. Jamba~\citep{jamba}는 트랜스포머와 Mamba 레이어를 번갈아 쌓는다. Hymba~\citep{hymba}는 같은 레이어 안에서 어텐션 헤드와 SSM 헤드를 나란히 돌린다. 합리적인 공학적 해법이지만, 공통된 한계가 있다: \textbf{두 시스템은 연산 도중 서로 대화하지 않는다.} 각자 독립적으로 출력을 만들고, 그 뒤에야 결과를 합친다. 어텐션은 SSM이 파악한 순차적 중요도를 모르고, SSM은 어텐션의 전역적 시야를 모른다.
+SSM은 다르게 접근한다. Mamba~\citep{gu2023mamba}는 토큰을 순서대로 읽으면서 ``얼마나 기억할지, 얼마나 잊을지''를 매 스텝 결정하고, 시퀀스를 고정 크기 상태(state)로 압축한다. 패턴 인식에 놀라울 만큼 효과적이지만 대가가 있다. 50번째 토큰에서 버린 정보가 500번째 토큰에서 필요해지면? 방법이 없다. 이미 사라졌다.
 
-우리는 더 긴밀한 통합을 제안한다. \textbf{SISA}에서 SSM 신호는 어텐션 스코어---토큰 $j$가 토큰 $i$에 얼마나 영향을 미칠지 결정하는 바로 그 숫자---에 직접 주입된다:
+이 두 구조를 합치려는 연구는 활발하다. Jamba~\citep{jamba}는 Transformer 레이어와 Mamba 레이어를 번갈아 쌓고, Hymba~\citep{hymba}는 같은 레이어 안에서 attention 헤드와 SSM 헤드를 나란히 돌린다. 합리적인 접근이지만 공통된 한계가 있다. \textbf{연산이 진행되는 동안 두 시스템은 서로를 모른다.} 각자 출력을 낸 뒤에야 합치는 구조에서, attention은 SSM이 파악한 순차적 중요도를 활용할 수 없고, SSM은 attention의 전역적 시야에 접근할 수 없다.
+
+SISA는 한 단계 더 들어간다. SSM 신호를 attention score---``토큰 $j$가 토큰 $i$에 얼마나 영향을 줄 것인가''를 결정하는 바로 그 숫자---안에 넣는다:
 \begin{equation}
-\text{score}_{ij} = \underbrace{\frac{\mathbf{q}_i^\top \mathbf{k}_j}{\sqrt{d_h}}}_{\text{이 토큰이 유사한가?}} \;+\; \underbrace{\lambda \cdot \bar{\mathbf{C}}_i^\top \bar{\mathbf{B}}_j}_{\text{이 토큰이 맥락상 중요한가?}}
-\label{eq:sisa_main}
+\text{score}_{ij} = \underbrace{\frac{\mathbf{q}_i^\top \mathbf{k}_j}{\sqrt{d_h}}}_{\text{비슷한가?}} \;+\; \underbrace{\lambda \cdot \bar{\mathbf{C}}_i^\top \bar{\mathbf{B}}_j}_{\text{중요한가?}}
 \end{equation}
 
-첫째 항은 표준 트랜스포머 어텐션이다. 둘째 항이 새로운 부분으로, Mamba-3~\citep{mamba3}의 수학적 프레임워크에 기반한 누적 감쇠(cumulative decay)와 데이터 의존 회전(data-dependent rotation)을 인코딩한다. 간단한 대수적 변환---SSM 채널을 쿼리와 키 벡터에 이어붙이는 것---을 통해, 이 합산은 표준 스케일드 내적 어텐션(SDPA) 한 번의 호출로 계산된다. 커스텀 커널도, 추가 행렬 연산도, 아키텍처적 오버헤드도 없다.
+첫째 항은 기존 Transformer attention이다. 둘째 항이 핵심인데, Mamba-3~\citep{mamba3}의 수학적 틀을 빌려 누적 감쇠(cumulative decay)와 데이터 의존 회전(data-dependent rotation)을 인코딩한다. SSM 채널을 query와 key에 이어붙이는 간단한 대수 변환 하나로, 이 합산은 표준 SDPA 호출 한 번에 끝난다. 커스텀 커널도, 추가 행렬곱도 필요 없다.
 
-이것이 \textbf{스코어 수준 융합(score-level fusion)}이다. SSM과 어텐션이 독립적으로 작동한 뒤 결과를 합치는 것이 아니라, 모든 어텐션 가중치를 \emph{공동으로} 결정한다. 우리가 아는 한, 이 수준에서 SSM 역학을 어텐션 연산에 통합한 선행 연구는 없다.
+이것을 \textbf{score 수준 융합}이라 부른다. SSM과 attention이 독립적으로 결과를 낸 뒤 합치는 것이 아니라, 모든 attention weight를 \emph{함께} 결정한다. 이 수준에서 SSM 역학을 attention에 통합한 선행 연구는, 우리가 조사한 한, 존재하지 않는다.
 
-\paragraph{핵심 발견.} 512개 토큰의 필러 텍스트 중간에 키-값 쌍을 숨기고, 모델에게 이를 찾게 하는 실험(Needle-In-A-Haystack, NIAH)이 이 설계의 의미를 가장 명확히 보여준다. 첫 번째 평가 체크포인트---전체 학습 데이터의 10\%만 본 시점---에서 SISA는 정답을 완벽하게 찾아낸다. 매번, 단 하나도 빠짐없이. 같은 시점에서 트랜스포머는 61\%, Mamba-2는 0\%다.
+\paragraph{핵심 실험 결과.} 512개 토큰의 무관한 텍스트 속에 정보 하나를 숨기고 찾게 하는 실험(NIAH)이 이 설계의 의미를 가장 분명하게 드러낸다. 학습 데이터의 10\%만 본 첫 번째 체크포인트에서, SISA는 숨긴 정보를 \textbf{200번 중 200번 전부} 찾아냈다. 같은 시점에서 Transformer는 61\%, 두 Mamba 변형은 0\%다.
 
-SISA가 더 많은 데이터를 보았거나 더 많은 파라미터를 가졌기 때문이 아니다. SSM 바이어스가 학습 시작 시점부터 시퀀스 내 정보가 어디에 축적되는지에 대한 구조적 사전지식(structured prior)을 제공하기 때문이다. 어텐션은 더 이상 관련성을 처음부터 발견할 필요가 없다. 어디를 봐야 하는지 알려주면, 거기를 본다.
+더 많은 데이터를 봐서도, 파라미터가 더 많아서도 아니다. SSM bias가 ``시퀀스 내 정보가 어디에 쌓이는지''에 대한 구조적 힌트를 학습 시작 시점부터 attention에 제공하기 때문이다. Attention은 더 이상 관련 위치를 처음부터 찾아 헤맬 필요가 없다. ``저기 봐''라는 한마디면 충분하다.
 
 % ============================================================
-% 2. 스코어 수준 융합
+% 2. 기존 하이브리드와의 차이
 % ============================================================
-\section{스코어 수준 융합: 새로운 설계 축}
+\section{Score 수준 융합이란}
 
-\subsection{SSM--어텐션 하이브리드의 지형}
+\subsection{기존 접근의 지형}
 
-기존의 결합 방식은 두 수준에서 이루어진다:
+SSM과 attention을 합치는 기존 방식은 두 가지 수준이다.
 
 \begin{itemize}
-\item \textbf{블록 수준.} Jamba~\citep{jamba}, Samba~\citep{samba}, Zamba~\citep{zamba}, Nemotron-H~\citep{nemotron}는 SSM 레이어와 트랜스포머 레이어를 통째로 번갈아 쌓는다. 두 메커니즘은 잔차 연결(residual stream)을 통해서만 상호작용한다.
+\item \textbf{블록 수준.} Jamba~\citep{jamba}, Samba~\citep{samba}, Zamba~\citep{zamba}, Nemotron-H~\citep{nemotron}. SSM 레이어와 Transformer 레이어를 통째로 번갈아 쌓는다. 잔차 연결(residual)을 통해서만 상호작용한다.
 
-\item \textbf{헤드 수준.} Hymba~\citep{hymba}와 Falcon-H1~\citep{falconh1}은 같은 레이어 안에서 어텐션 헤드와 SSM 헤드를 병렬로 돌린다. 각각의 출력을 연결(concatenation)하거나 평균내어 합친다.
+\item \textbf{헤드 수준.} Hymba~\citep{hymba}, Falcon-H1~\citep{falconh1}. 한 레이어 안에서 attention 헤드와 SSM 헤드가 병렬로 돌아간 뒤, 출력을 합친다.
 \end{itemize}
 
-두 경우 모두, 각 메커니즘은 상대방의 결과를 보기 전에 자신의 표현을 확정한다. 함께 일하면서도 작업 중에는 한마디도 나누지 않는 동료와 같다---일이 끝나고 나서야 메모를 비교한다.
+공통점이 있다. 어느 쪽이든, 각 메커니즘은 상대의 판단을 보기 전에 자기 결과를 확정한다. 같은 프로젝트를 하면서도 중간에 대화 한마디 없이 최종 보고서만 합치는 팀과 같다.
 
-\textbf{스코어 수준 융합}은 이 장벽을 제거한다. SISA에서 어텐션 스코어는 내용 유사도(트랜스포머)와 구조적 중요도(SSM)의 \emph{결합 함수}다. 소프트맥스는 이 통합 신호에 대해 작동하여, 두 관점을 동시에 반영하는 어텐션 가중치를 생성한다.
+\textbf{Score 수준 융합}은 이 벽을 없앤다. SISA에서 attention score는 내용 유사도(Transformer)와 순차적 중요도(SSM)의 \emph{합}이다. Softmax는 이 통합된 신호 위에서 작동하므로, 두 관점이 매 weight에 동시에 반영된다.
 
-\subsection{어텐션 스코어 바이어스와의 관계}
+\subsection{Attention score bias 연구와의 관계}
 
-어텐션 로짓에 항을 추가하는 것 자체는 새롭지 않다. ALiBi~\citep{alibi}는 고정된 선형 거리 페널티를, T5~\citep{raffel2020t5}는 학습 가능한 상대 위치 바이어스를 사용한다. DAPE~\citep{dape}는 바이어스를 입력 내용에 적응적으로 만든다. 그러나 이들은 모두 \emph{위치적} 성격이다---``두 토큰이 얼마나 떨어져 있는가?''를 인코딩할 뿐, ``그 사이에 무슨 일이 있었는가?''는 담지 못한다.
+Attention logit에 항을 더하는 것 자체는 새롭지 않다. ALiBi~\citep{alibi}는 고정 거리 페널티를, T5~\citep{raffel2020t5}는 학습 가능한 상대 위치 bias를 넣는다. DAPE~\citep{dape}는 입력에 따라 bias를 바꾼다. 하지만 이들은 전부 \emph{위치적}이다. ``두 토큰이 얼마나 먼가?''는 알려주지만 ``그 사이에서 무슨 일이 있었는가?''는 담지 못한다.
 
-가장 가까운 선행 연구는 FoX(Forgetting Transformer)~\citep{fox}로, 누적 망각 게이트를 어텐션 로짓에 더한다. SISA는 세 가지 점에서 다르다. 첫째, FoX의 바이어스는 위치 쌍당 스칼라(1차원 감쇠)인 반면, SISA는 감쇠\emph{와} 데이터 의존 회전을 인코딩하는 $d_s$차원 내적이다. 둘째, SISA의 구성은 Mamba-3의 복소 SSM 공식에서 파생되어 더 풍부한 역학적 구조를 갖는다. 셋째, 증강된 Q/K 벡터를 통한 구현으로 명시적인 $L \times L$ 바이어스 행렬을 피한다.
+가장 가까운 연구는 FoX~\citep{fox}(Forgetting Transformer)다. 누적 forget gate를 score에 더한다: $A = \text{softmax}(QK^\top + D)$. SISA와의 차이는 세 가지다. 첫째, FoX의 bias는 위치 쌍당 스칼라(감쇠만 인코딩)이고, SISA는 $d_s$차원 내적으로 감쇠\emph{와} 회전을 함께 담는다. 둘째, SISA는 Mamba-3의 복소 SSM에서 유래한 더 풍부한 역학 구조를 갖는다. 셋째, 증강 Q/K 구현으로 $L \times L$ bias 행렬을 명시적으로 만들지 않는다.
 
 % ============================================================
 % 3. 방법
 % ============================================================
 \section{방법}
 
-\subsection{SISA 스코어}
+\subsection{SISA Score}
 
-표준 셀프 어텐션의 스코어 $s_{ij} = \mathbf{q}_i^\top \mathbf{k}_j / \sqrt{d_h}$에 SSM 유래 항을 더한다:
+기존 attention score $s_{ij} = \mathbf{q}_i^\top \mathbf{k}_j / \sqrt{d_h}$에 SSM 항을 더한다:
 \begin{equation}
 s_{ij}^{\text{SISA}} = \frac{\mathbf{q}_i^\top \mathbf{k}_j}{\sqrt{d_h}} + \lambda \cdot \bar{\mathbf{C}}_i^\top \bar{\mathbf{B}}_j, \quad i \geq j
 \end{equation}
 
-$\lambda > 0$은 헤드별 학습 가능 스칼라($\text{softplus}(\lambda_{\text{raw}})$, $\lambda_{\text{raw}} = -1$로 초기화하여 $\lambda \approx 0.31$)이다.
+$\lambda$는 헤드별로 학습되는 양의 스칼라다 ($\text{softplus}(\lambda_{\text{raw}})$, 초기값 $\lambda_{\text{raw}} = -1 \Rightarrow \lambda \approx 0.31$).
 
-\subsection{$\bar{\mathbf{C}}$와 $\bar{\mathbf{B}}$의 구성}
+\subsection{SSM 채널 $\bar{\mathbf{C}}$, $\bar{\mathbf{B}}$ 구성}
 
-Mamba-3~\citep{mamba3}의 복소 SSM $\leftrightarrow$ 데이터 의존 RoPE 등가성을 따른다. 입력 $\mathbf{x}_t \in \mathbb{R}^D$에 대해:
+Mamba-3~\citep{mamba3}가 증명한 복소 SSM $\leftrightarrow$ data-dependent RoPE 등가성을 활용한다.
 
-\paragraph{감쇠.} 데이터 의존적이면서 구조적으로 안정적인 감쇠율:
+\paragraph{감쇠.} 입력에 따라 달라지되, 구조적으로 $(0, 1)$ 범위에 머무르는 감쇠율:
 \begin{equation}
-\alpha_t = \exp\!\big(-\text{softplus}(\mathbf{w}_\alpha^\top \mathbf{x}_t + b_\alpha)\big) \in (0, 1)
+\alpha_t = \exp\!\big(-\text{softplus}(\mathbf{w}_\alpha^\top \mathbf{x}_t + b_\alpha)\big)
 \end{equation}
+$b_\alpha = -5$로 초기화하면 반감기가 약 100 토큰이다.
 
-\paragraph{위상.} 데이터 의존 회전 주파수: $\theta_t = \mathbf{W}_\theta \mathbf{x}_t$
+\paragraph{위상.} 데이터 의존 회전 주파수: $\theta_t = \mathbf{W}_\theta \mathbf{x}_t \in \mathbb{R}^{d_s/2}$
 
-\paragraph{누적량 (FP32).}
+\paragraph{누적 (FP32).}
 \begin{equation}
-g_t = \sum_{k \leq t} \log \alpha_k, \quad \Phi_t = \sum_{k \leq t} \theta_k, \quad c = \frac{\max_t g_t + \min_t g_t}{2}
+g_t = \textstyle\sum_{k \leq t} \log \alpha_k, \qquad \Phi_t = \textstyle\sum_{k \leq t} \theta_k, \qquad c = \frac{\max_t g_t + \min_t g_t}{2}
 \end{equation}
 
 \paragraph{최종 채널.}
@@ -119,57 +121,59 @@ g_t = \sum_{k \leq t} \log \alpha_k, \quad \Phi_t = \sum_{k \leq t} \theta_k, \q
 \bar{\mathbf{B}}_j = e^{-(g_j - c)} \cdot R(\Phi_j) \cdot \mathbf{B}_j
 \end{equation}
 
-$R(\Phi)$는 2$\times$2 회전 행렬의 블록 대각 적용(SSM 채널에 대한 데이터 의존 RoPE)이다. 위치적 RoPE는 $\mathbf{q}, \mathbf{k}$에만 별도로 적용한다.
+$R(\Phi)$는 블록 대각 2$\times$2 회전 (SSM 채널에 대한 data-dependent RoPE). 위치 RoPE는 $\mathbf{q}, \mathbf{k}$에만 따로 적용하며, 두 회전은 섞지 않는다.
 
-\subsection{증강 Q/K: 핵심 정리}
+\subsection{증강 Q/K --- 핵심 트릭}
+
+실용성을 보장하는 관찰: 가산 score가 증강 벡터의 단일 내적으로 정확히 분해된다.
 
 \begin{proposition}
-$s = d_h^{1/4} \sqrt{\lambda}$로 놓고 $\hat{\mathbf{Q}}_i = [\mathbf{q}_i;\; s \cdot \bar{\mathbf{C}}_i]$, $\hat{\mathbf{K}}_j = [\mathbf{k}_j;\; s \cdot \bar{\mathbf{B}}_j]$를 구성하면:
-\begin{equation}
-\frac{\hat{\mathbf{Q}}_i^\top \hat{\mathbf{K}}_j}{\sqrt{d_h}} = s_{ij}^{\text{SISA}}
-\end{equation}
+$s = d_h^{1/4}\sqrt{\lambda}$, $\hat{\mathbf{Q}}_i = [\mathbf{q}_i;\, s\bar{\mathbf{C}}_i]$, $\hat{\mathbf{K}}_j = [\mathbf{k}_j;\, s\bar{\mathbf{B}}_j]$로 놓으면
+$\hat{\mathbf{Q}}_i^\top \hat{\mathbf{K}}_j / \sqrt{d_h} = s_{ij}^{\text{SISA}}$.
 \end{proposition}
 
-따라서 SISA는 \textbf{단일 SDPA 호출}로 계산된다:
+따라서 SISA는 SDPA 한 번으로 계산된다:
 \begin{equation}
-\mathbf{Y} = \text{SDPA}(\hat{\mathbf{Q}}, \hat{\mathbf{K}}, \mathbf{V}, \; \text{scale} = 1/\sqrt{d_h}, \; \text{causal} = \text{True})
+\mathbf{Y} = \text{SDPA}(\hat{\mathbf{Q}},\, \hat{\mathbf{K}},\, \mathbf{V},\;\text{scale}=1/\sqrt{d_h},\;\text{causal}=\text{True})
 \end{equation}
+
+구현 시 세 가지가 중요하다. (1) SDPA scale은 반드시 $1/\sqrt{d_h}$이어야 하며 $1/\sqrt{d_h+d_s}$를 쓰면 안 된다. (2) 위치 RoPE는 $\mathbf{q}, \mathbf{k}$에만 적용한다. (3) $g-c$를 $[-11, 11]$로 clamp하여 bf16 오버플로를 방지한다.
 
 % ============================================================
 % 4. 실험 설정
 % ============================================================
 \section{실험 설정}
 
-\paragraph{모델.} 네 가지 아키텍처를 세 가지 규모에서 파라미터를 맞추어 비교한다:
+\paragraph{모델.} 네 아키텍처를 세 규모에서 파라미터를 맞추어 비교한다.
 
 \begin{table}[h]
 \centering
 \small
-\caption{모델 구성. GPT-NeoX 토크나이저(어휘 50,277), 임베딩 타이드, RMSNorm, 시퀀스 길이 2,048 공통.}
+\caption{모델 구성. 토크나이저: GPT-NeoX (50,277), tied embedding, RMSNorm, 시퀀스 2,048.}
 \begin{tabular}{llrrr}
 \toprule
 \textbf{모델} & \textbf{주요 설정} & \textbf{50M} & \textbf{152M} & \textbf{369M} \\
 \midrule
-Transformer & $d$/$h$/$L$/$d_{\text{ff}}$ & 512/8/6/2048 & 768/12/12/3072 & 1024/16/24/2944 \\
-SISA & $d$/$h$/$L$/$d_{\text{ff}}$/$d_s$ & 512/8/6/1832/32 & 768/12/12/2748/32 & 1024/16/24/2512/32 \\
-Mamba-2 & $d$/$L$/$d_{\text{state}}$ & 512/14/64 & 768/31/64 & 1024/49/64 \\
-Mamba-3 & $d$/$L$/$d_{\text{state}}$ & 512/11/32 & 768/24/32 & 1024/38/32 \\
+Transformer & $d/h/L/d_{\text{ff}}$ & 512/8/6/2048 & 768/12/12/3072 & 1024/16/24/2944 \\
+SISA & $d/h/L/d_{\text{ff}}/d_s$ & 512/8/6/1832/32 & 768/12/12/2748/32 & 1024/16/24/2512/32 \\
+Mamba-2 & $d/L/d_{\text{state}}$ & 512/14/64 & 768/31/64 & 1024/49/64 \\
+Mamba-3 & $d/L/d_{\text{state}}$ & 512/11/32 & 768/24/32 & 1024/38/32 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{학습.} SlimPajama-6B~\citep{slimpajama}에서 5B 토큰으로 처음부터 학습. AdamW ($\beta_1$=0.9, $\beta_2$=0.95), 가중치 감쇠 0.1, 그래디언트 클리핑 1.0, 코사인 스케줄, 유효 배치 크기 524K 토큰. bf16 혼합 정밀도, NVIDIA H100 GPU.
+\paragraph{학습.} 모든 모델을 SlimPajama-6B에서 5B 토큰으로 처음부터 학습한다. 하이퍼파라미터는 동일: AdamW ($\beta_1{=}0.9$, $\beta_2{=}0.95$), weight decay 0.1, gradient clipping 1.0, cosine schedule + 500 step warmup, 유효 배치 524K 토큰, bf16, NVIDIA H100.
 
-\paragraph{Mamba-3 구현.} 공식 구현이 아직 공개되지 않아, Mamba-2의 최적화된 Triton SSD 커널을 활용한 two-SSD 분해로 구현하였다. 순수 PyTorch 참조 구현과의 수치적 일치를 검증하였다(FP32 기준 최대 편차 $< 0.002$).
+\paragraph{Mamba-3 구현.} 공식 \texttt{mamba-ssm} 패키지에 Mamba-3가 아직 포함되지 않아, 논문의 two-SSD 분해를 따라 Mamba-2의 Triton SSD 커널을 두 번 호출하는 방식으로 구현했다. 순수 PyTorch 참조 구현과의 수치 일치를 검증했다 (FP32 최대 편차 $< 0.002$).
 
-\paragraph{평가.} 다섯 가지 벤치마크로 서로 다른 능력을 측정한다:
+\paragraph{벤치마크.}
 \begin{itemize}
 \setlength\itemsep{0.1em}
-\item \textbf{LAMBADA}~\citep{lambada} --- 긴 문맥 끝의 마지막 단어 예측
-\item \textbf{NIAH} --- 필러 텍스트 속 숨긴 정보 검색 (L=512, 200회)
-\item \textbf{HellaSwag}~\citep{hellaswag} --- 상식적 문장 완성
-\item \textbf{ARC-Easy}~\citep{arc} --- 초등 수준 과학 지식
-\item \textbf{WinoGrande}~\citep{winogrande} --- 대명사 지시 해소
+\item \textbf{LAMBADA} --- 긴 문맥의 마지막 단어 맞추기. 멀리 떨어진 단서를 정확히 짚어내는 능력.
+\item \textbf{NIAH} --- 무관한 텍스트(512 토큰) 속에 숨긴 정보를 찾아내기. 200회 시행.
+\item \textbf{HellaSwag} --- 네 개 중 상식적으로 자연스러운 이어짐 고르기. 랜덤 기준 25\%.
+\item \textbf{ARC-Easy} --- 초등 수준 과학 문제. 학습 데이터에서 습득한 지식 측정.
+\item \textbf{WinoGrande} --- ``그/그녀''가 누구를 가리키는지 판단. 랜덤 기준 50\%.
 \end{itemize}
 
 % ============================================================
@@ -181,7 +185,7 @@ Mamba-3 & $d$/$L$/$d_{\text{state}}$ & 512/11/32 & 768/24/32 & 1024/38/32 \\
 
 \begin{table}[h]
 \centering
-\caption{152M 규모 최종 결과 (5B 토큰 학습 완료). \textbf{굵게}: 각 벤치마크 최고 성능.}
+\caption{152M, 5B 토큰 학습 완료 후 최종 결과. \textbf{굵게}: 벤치마크별 최고.}
 \begin{tabular}{lccccc}
 \toprule
 & \textbf{LAMBADA}$\uparrow$ & \textbf{NIAH}$\uparrow$ & \textbf{HellaSwag}$\uparrow$ & \textbf{ARC-E}$\uparrow$ & \textbf{WinoG}$\uparrow$ \\
@@ -194,13 +198,13 @@ Mamba-3 & 15.51 & 99.00 & 26.02 & 34.95 & \textbf{52.72} \\
 \end{tabular}
 \end{table}
 
-SISA는 문맥 이해 및 검색과 가장 직접적으로 관련된 세 벤치마크---LAMBADA, NIAH, HellaSwag---에서 1위를 차지한다. Mamba-2는 패턴 기억에 강점을 보여 ARC-Easy에서 근소하게 앞서고, Mamba-3는 WinoGrande에서 소폭 우위를 보인다.
+SISA는 문맥 이해·검색과 직결되는 세 벤치마크---LAMBADA, NIAH, HellaSwag---에서 1위다. ARC-Easy에서는 Mamba-2가, WinoGrande에서는 Mamba-3가 근소하게 앞서는데, 이는 SSM의 패턴 압축 능력이 지식 기억과 대명사 해소에 유리하게 작용한 결과로 보인다. Transformer는 다섯 벤치마크 중 네 곳에서 최하위이며, NIAH에서만 최종적으로 100\%에 도달해 동률을 이룬다.
 
-\subsection{NIAH: 첫날부터 완벽한 검색}
+\subsection{NIAH: 첫날부터 100\%}
 
 \begin{table}[h]
 \centering
-\caption{학습 단계별 NIAH 정확도(\%). SISA는 첫 체크포인트부터 완벽하다.}
+\caption{학습 진행에 따른 NIAH 정확도(\%). SISA는 첫 체크포인트부터 완벽하다.}
 \begin{tabular}{lrrrrrr}
 \toprule
 & \textbf{1K} & \textbf{2K} & \textbf{3K} & \textbf{5K} & \textbf{7K} & \textbf{최종} \\
@@ -213,17 +217,19 @@ Mamba-3 & 0.0 & 61.0 & 96.5 & 86.0 & 97.5 & 99.0 \\
 \end{tabular}
 \end{table}
 
-스텝 1000, 겨우 5억 토큰을 본 시점---전체 학습 예산의 10\%에 불과하다. 트랜스포머는 숨겨진 바늘을 61.5\%만 찾아낸다. 두 Mamba 변형은 단 하나도 찾지 못한다. SISA는 100\%다.
+Step 1000. 전체 학습의 10\%. 겨우 5억 토큰을 본 시점이다.
 
-이것은 학습된 기술이 아니라 \emph{아키텍처적 사전지식}이다. SSM 바이어스 $\lambda \cdot \bar{\mathbf{C}}_i^\top \bar{\mathbf{B}}_j$는 누적 순차 역학에 기반하여 위치에 비균등한 가중치를 부여하는데, 이는 모델이 의미 있는 표현을 학습하기도 전에 작동한다. 학습이 진행되면서 이 사전지식은 정교해지지만, 처음부터 발견할 필요는 없었다.
+Transformer는 숨겨진 정보를 61\%만 찾는다. Mamba-2와 Mamba-3는 단 하나도 못 찾는다. SISA는 200번 중 200번 전부 찾아낸다.
 
-Mamba-2의 82.5\% 상한은 보완적 한계를 드러낸다: 선형 재귀가 이미 압축해 버린 정보는 아무리 학습해도 되찾을 수 없다. SISA는 어텐션이 모든 위치에 대한 접근을 유지하기 때문에 이 실패 모드를 완전히 피한다.
+이건 학습으로 얻은 능력이 아니다. 아키텍처가 부여한 사전지식이다. SSM bias $\lambda \cdot \bar{\mathbf{C}}_i^\top \bar{\mathbf{B}}_j$는 시퀀스의 순차적 역학에 기반해 위치마다 다른 가중치를 만들어낸다. 모델이 아직 의미 있는 표현을 배우기도 전에, 이 가중치가 attention에게 ``여기를 봐''라고 알려준다.
 
-\subsection{학습 효율: 절반의 토큰, 같은 성능}
+Transformer가 같은 수준(100\%)에 도달하려면 Step 7000까지---전체 학습의 73\%를---기다려야 한다. SISA 대비 \textbf{6배 이상 느리다}. Mamba-2는 학습을 끝내도 82.5\%에서 멈춘다. 선형 재귀가 한번 압축해 버린 정보는 되살릴 수 없기 때문이다. SISA는 attention이 모든 위치에 접근할 수 있으므로 이 문제가 원천적으로 발생하지 않는다.
+
+\subsection{학습 효율: 절반의 데이터로 같은 성능}
 
 \begin{table}[h]
 \centering
-\caption{학습 단계별 LAMBADA 정확도(\%). SISA는 스텝 4000에서 이미 트랜스포머의 최종 성능을 넘는다.}
+\caption{LAMBADA 정확도(\%) 추이. SISA는 Step 4000에서 이미 Transformer의 최종 성능을 넘긴다.}
 \begin{tabular}{lrrrrrr}
 \toprule
 & \textbf{1K} & \textbf{2K} & \textbf{3K} & \textbf{5K} & \textbf{7K} & \textbf{최종} \\
@@ -236,7 +242,9 @@ Mamba-3 & 1.82 & 10.05 & 12.03 & 13.91 & 15.31 & 15.51 \\
 \end{tabular}
 \end{table}
 
-스텝 4000(2.1B 토큰, 전체의 42\%)에서 SISA는 LAMBADA 14.79\%를 달성한다---5B 토큰 전체를 학습한 트랜스포머의 최종 점수 13.88\%를 이미 넘어선 수치다. SSM 바이어스가 맥락 의존성 학습을 가속하는 귀납적 편향(inductive bias)으로 작용하여, 주어진 성능에 도달하는 데 필요한 그래디언트 업데이트 횟수를 줄인다.
+Step 4000. 전체 5B 토큰 중 2.1B, 42\%를 소화한 시점에서 SISA의 LAMBADA는 14.79\%다. Transformer가 \emph{나머지 58\%까지 전부 학습하고 나서야} 도달하는 13.88\%를 이미 넘어선 수치다. 같은 성능에 절반의 토큰이면 충분하다.
+
+이 차이는 실용적으로 의미가 크다. 대부분의 현실적 학습 예산은 ``충분한'' 양에 못 미친다. 제한된 예산 안에서 SISA는 다른 아키텍처보다 더 유능한 모델을 만들어낸다.
 
 \subsection{처리량}
 
@@ -255,35 +263,41 @@ Mamba-3 & 8,797 & SSD 커널 $\times$ 2 \\
 \end{tabular}
 \end{table}
 
-SISA는 Mamba-2 대비 57\%, Mamba-3 대비 91\% 높은 처리량을 보인다. 트랜스포머 대비 39\% 낮은 것은 증강된 Q/K 차원($d_h + d_s = 96$ vs.\ $d_h = 64$)에 기인하나, 이 오버헤드는 시퀀스 길이와 무관하게 고정적이다.
+SISA는 Mamba-2보다 57\%, Mamba-3보다 91\% 빠르다. 더 나은 벤치마크 성능을 더 빠른 속도로 달성한다. Transformer 대비 39\% 느린 것은 증강 Q/K 차원($d_h + d_s = 96$ vs.\ $d_h = 64$) 때문인데, 이 오버헤드는 시퀀스 길이와 무관하게 일정하다.
 
 % ============================================================
 % 6. 분석
 % ============================================================
 \section{분석}
 
-\subsection{SSM 바이어스가 실제로 하는 일}
+\subsection{SSM Bias의 역할}
 
-SISA를 ``어텐션 + 기억''으로 설명하고 싶은 유혹이 있으나, 이 프레이밍은 정확하지 않다. SSM 채널 $\bar{\mathbf{C}}$와 $\bar{\mathbf{B}}$는 재귀 상태처럼 정보를 저장하지 않는다. 대신, 어텐션이 키-값 쌍을 바라보는 \emph{구조적 렌즈}를 제공한다.
+SISA를 ``기억하는 attention''이라 부르고 싶은 유혹이 있지만, 정확한 표현은 아니다. $\bar{\mathbf{C}}$와 $\bar{\mathbf{B}}$는 재귀 상태(recurrent state)처럼 정보를 저장하지 않는다. 이들이 하는 일은 attention이 key-value 쌍을 바라볼 때 끼우는 \emph{렌즈}를 제공하는 것이다.
 
-누적 감쇠 $e^{g_i - c}$는 데이터 의존적 소프트 거리 가중치로 작용한다. ALiBi의 고정 선형 페널티와 달리 감쇠율이 입력 내용에 따라 변한다. 데이터 의존 회전 $R(\Phi)$는 위상 성분을 추가하여, 유사한 감쇠를 공유하지만 다른 순차적 역할을 맡은 위치를 구별할 수 있게 한다.
+누적 감쇠 $e^{g_i - c}$는 ALiBi의 고정 거리 페널티와 달리 입력 내용에 따라 감쇠율이 달라지는 소프트 거리 가중치로 작동한다. 데이터 의존 회전 $R(\Phi)$는 감쇠가 비슷하더라도 시퀀스 내 역할이 다른 위치를 구별하게 해준다. 둘을 합치면, 언어의 인과적·순차적 성격을 내용 유사도만으로는 포착할 수 없는 방식으로 반영하는 attention 행렬 위의 구조적 사전분포(structured prior)가 된다.
 
-\subsection{소프트맥스 병목}
+\subsection{SSM이 지식 과제에서 강한 이유}
 
-SISA의 우위가 일관적이면서도 HellaSwag 같은 벤치마크에서 소폭(+1.3\%p)에 그치는 이유는 소프트맥스 정규화에 있다. 소프트맥스는 어텐션 가중치의 합을 1로 강제하여 위치 간 경쟁을 만든다. 표준 Q/K 유사도가 강한 신호를 만들면, 가산적 SSM 바이어스의 상대적 영향이 줄어든다.
+Mamba-2가 ARC-Easy에서 최고점(36.38\%)을 기록한 것은 우연이 아니다. SSM의 선형 재귀는 ``식물은 햇빛이 필요하다''와 같은 분포적 패턴을 효율적으로 압축한다. 반복적으로 나타나는 사실 관계를 상태 역학이 강화하는 데 유리한 구조이기 때문이다. SISA도 SSM bias를 통해 이 효과를 부분적으로 누리며 (35.79\%, Transformer의 33.31\% 대비 확실히 높다), 완전한 SSM 구조에는 근소하게 못 미치는 것으로 보인다.
 
-최근 시그모이드 어텐션 연구~\citep{sigmoid_attn}는 소프트맥스를 원소별 시그모이드로 대체해도 품질 손실 없이 모델을 학습할 수 있음을 보였다. 시그모이드 SISA---SSM 바이어스가 다른 위치와의 경쟁 없이 독립적으로 각 위치의 가중치에 영향을 미치는 변형---는 자연스러운 다음 단계다.
+\subsection{Softmax가 만드는 병목}
+
+SISA의 우위가 일관적이면서도 HellaSwag 같은 과제에서 소폭(+1.3\%p)에 그치는 이유가 있다. Softmax는 attention weight의 합을 1로 강제한다. 이것이 위치 간 경쟁을 만드는데, 표준 Q/K 유사도가 이미 강한 신호를 보낼 때 가산적 SSM bias의 상대적 영향력이 줄어든다.
+
+최근 sigmoid attention 연구~\citep{sigmoid_attn}는 softmax를 원소별 sigmoid로 대체해도 성능 손실 없이 학습할 수 있음을 보여주었다. Sigmoid를 쓰면 각 위치의 weight가 다른 위치와 경쟁하지 않으므로, SSM bias가 full volume으로 작동할 수 있다. Sigmoid SISA는 자연스러운 다음 단계다.
 
 % ============================================================
 % 7. 결론
 % ============================================================
 \section{결론}
 
-우리는 단순한 관찰에서 출발했다: 트랜스포머와 SSM은 서로를 보완하는 실패 모드를 갖지만, 기존의 모든 하이브리드는 둘을 별개의 상자에 넣어둔다. SISA는 그 상자를 연다. SSM 신호를 어텐션 스코어---정보 흐름을 제어하는 단 하나의 숫자---안에 배치함으로써, 순차적 인식과 전역적 접근이 합쳐야 할 별개의 능력이 아니라 하나의 통합된 연산이 되는 아키텍처를 만든다.
+Transformer와 SSM은 서로의 약점을 정확히 보완할 수 있는 구조다. 하나는 어디든 볼 수 있지만 어디를 봐야 할지 모르고, 다른 하나는 무엇이 중요한지 알지만 지나간 것은 되돌릴 수 없다. 그런데 기존 하이브리드는 이 둘을 별개의 상자에 넣은 채 결과만 합쳐왔다.
 
-실용적 결과는 명확하다. SISA는 학습 초기부터 정보를 완벽하게 검색한다. 절반의 데이터로 맥락 의존성을 학습한다. 대부분의 벤치마크에서 순수 트랜스포머와 순수 SSM을 모두 능가한다. 그리고 이 모든 것이 코드 한 줄로 귀결되는 메커니즘을 통해 이루어진다: SSM 채널을 Q와 K에 이어붙이고, SDPA를 호출한다.
+SISA는 상자를 연다. SSM 신호를 attention score 안에 넣어, 순차적 인식과 전역적 접근이 하나의 연산으로 이루어지게 한다.
 
-어텐션은 정보의 홍수 속에서 허우적대고 있었다. 우리는 나침반을 쥐여 주었다. 다음 단계는 나침반의 바늘이 더 자유롭게 흔들리게 하는 것이다.
+실험 결과는 명확하다. SISA는 학습 초기부터 정보를 빠짐없이 검색한다. 절반의 데이터만으로 맥락 이해 능력을 완성한다. 대부분의 벤치마크에서 순수 Transformer와 순수 SSM 모두를 넘어선다. 그리고 이 모든 것이 코드 한 줄로 귀결된다: SSM 채널을 Q와 K에 이어붙이고, SDPA를 호출한다.
+
+Attention은 정보의 홍수 속에서 허우적대고 있었다. 우리는 나침반을 쥐여 주었다. 남은 과제는 그 나침반이 더 자유롭게 가리킬 수 있도록, softmax라는 틀을 벗겨내는 것이다.
 
 % ============================================================
 % 참고문헌
