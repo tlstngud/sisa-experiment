@@ -19,6 +19,11 @@ class ModelConfig:
     expand_mamba: int = 2
     d_conv_mamba: int = 4
 
+    # Mamba-3 specific (half state size of Mamba-2 for comparable perf)
+    n_layer_mamba3: int = 24  # 153.1M params (~152M target)
+    d_state_mamba3: int = 32
+    expand_mamba3: int = 2
+
 
 @dataclass
 class TrainConfig(ModelConfig):
@@ -71,6 +76,9 @@ def get_phase_config(phase: int, model_type: str) -> TrainConfig:
             d_ff_reduced=920,
             d_state=32,
             n_layer_mamba=8,
+            n_layer_mamba3=6,  # ~16M params for Phase 0
+            d_state_mamba3=32,
+            expand_mamba3=2,
             micro_batch=2,
             grad_accum=16,
             max_tokens=50_000_000,  # 50M
@@ -93,6 +101,9 @@ def get_phase_config(phase: int, model_type: str) -> TrainConfig:
             d_ff_reduced=2748,
             d_state=32,
             n_layer_mamba=31,
+            n_layer_mamba3=24,  # 153.1M params (~152M target)
+            d_state_mamba3=32,
+            expand_mamba3=2,
             micro_batch=2,
             grad_accum=128,
             max_tokens=5_000_000_000,  # 5B
@@ -111,6 +122,9 @@ def get_phase_config(phase: int, model_type: str) -> TrainConfig:
             d_ff_reduced=2512,
             d_state=32,
             n_layer_mamba=49,
+            n_layer_mamba3=38,  # 373.5M params (~369M target)
+            d_state_mamba3=32,
+            expand_mamba3=2,
             micro_batch=2,
             grad_accum=128,
             max_tokens=20_000_000_000,  # 20B
@@ -118,6 +132,29 @@ def get_phase_config(phase: int, model_type: str) -> TrainConfig:
             lr=3e-4,
             lr_lambda=3e-5,
             wandb_run_name=f"phase2_{model_type}",
+        )
+    elif phase == 3:
+        # ~50M scale for scaling analysis
+        cfg = TrainConfig(
+            model_type=model_type,
+            d_model=512,
+            n_head=8,
+            n_layer=6,
+            d_ff=2048,
+            d_ff_reduced=1832,
+            d_state=32,
+            n_layer_mamba=14,
+            n_layer_mamba3=11,
+            d_state_mamba3=32,
+            expand_mamba3=2,
+            micro_batch=4,
+            grad_accum=64,
+            max_tokens=5_000_000_000,  # 5B
+            warmup_steps=500,
+            lr=6e-4,
+            lr_lambda=6e-5,
+            compile=False,
+            wandb_run_name=f"phase3_{model_type}",
         )
     else:
         raise ValueError(f"Unknown phase: {phase}")

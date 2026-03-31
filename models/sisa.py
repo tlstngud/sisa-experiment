@@ -111,6 +111,8 @@ class SISALayer(nn.Module):
 
         # --- Apply decay scaling ---
         g_minus_c = (g - c).unsqueeze(-1)  # (B, H, L, 1)
+        # Clamp to prevent bf16 overflow: exp(11) ≈ 59874 < bf16 max (65504)
+        g_minus_c = g_minus_c.clamp(-11.0, 11.0)
         C_bar = C_ssm.float() * torch.exp(g_minus_c)   # (B, H, L, d_state)
         B_bar = B_ssm.float() * torch.exp(-g_minus_c)
 

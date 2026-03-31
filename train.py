@@ -29,12 +29,12 @@ from data.dataset import create_dataloader
 
 def parse_args():
     parser = argparse.ArgumentParser(description="SISA Training")
-    parser.add_argument("--phase", type=int, required=True, choices=[0, 1, 2])
+    parser.add_argument("--phase", type=int, required=True, choices=[0, 1, 2, 3])
     parser.add_argument(
         "--model",
         type=str,
         required=True,
-        choices=["transformer", "transformer_reduced", "mamba2", "sisa"],
+        choices=["transformer", "transformer_reduced", "mamba2", "mamba3", "sisa"],
     )
     parser.add_argument("--resume", type=str, default=None, help="Checkpoint path to resume from")
     parser.add_argument("--no-wandb", action="store_true")

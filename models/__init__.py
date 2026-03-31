@@ -1,6 +1,7 @@
 from .transformer import TransformerModel
 from .sisa import SISAModel
 from .mamba2 import Mamba2Model
+from .mamba3 import Mamba3Model
 
 
 def create_model(config):
@@ -41,6 +42,13 @@ def create_model(config):
             d_state=config.d_state_mamba,
             expand=config.expand_mamba,
             d_conv=config.d_conv_mamba,
+        ),
+        "mamba3": lambda: Mamba3Model(
+            vocab_size=config.vocab_size,
+            d_model=config.d_model,
+            n_layer=config.n_layer_mamba3,
+            d_state=config.d_state_mamba3,
+            expand=config.expand_mamba3,
         ),
     }
     if config.model_type not in builders:
