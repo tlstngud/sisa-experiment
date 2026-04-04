@@ -34,7 +34,7 @@ def parse_args():
         "--model",
         type=str,
         required=True,
-        choices=["transformer", "transformer_reduced", "mamba2", "mamba3", "sisa"],
+        choices=["transformer", "transformer_reduced", "mamba2", "mamba3", "sisa", "hybrid_transformer", "hybrid_sisa"],
     )
     parser.add_argument("--resume", type=str, default=None, help="Checkpoint path to resume from")
     parser.add_argument("--no-wandb", action="store_true")
@@ -185,6 +185,13 @@ def main():
     # --- Model ---
     model = create_model(config)
     model = model.to(device=device, dtype=torch.bfloat16)
+
+    # Keep lambda_raw in fp32 to avoid bf16 precision loss during training
+    from models.sisa import SISAModel
+    base_model = model._orig_mod if hasattr(model, "_orig_mod") else model
+    if isinstance(base_model, SISAModel):
+        for layer in base_model.layers:
+            layer.lambda_raw.data = layer.lambda_raw.data.float()
 
     if config.compile:
         print("  Compiling model with torch.compile...")

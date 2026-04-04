@@ -19,10 +19,14 @@ class ModelConfig:
     expand_mamba: int = 2
     d_conv_mamba: int = 4
 
-    # Mamba-3 specific (half state size of Mamba-2 for comparable perf)
-    n_layer_mamba3: int = 24  # 153.1M params (~152M target)
-    d_state_mamba3: int = 32
+    # Mamba-3 specific (official mamba-ssm implementation)
+    n_layer_mamba3: int = 30  # 149.9M params (~152M target)
+    d_state_mamba3: int = 64
     expand_mamba3: int = 2
+
+    # Hybrid specific (Mamba front + Attn/SISA back)
+    n_mamba_front: int = 20  # 149.7M with 4 attn layers (~152M target)
+    n_attn_back: int = 4
 
 
 @dataclass
@@ -76,8 +80,8 @@ def get_phase_config(phase: int, model_type: str) -> TrainConfig:
             d_ff_reduced=920,
             d_state=32,
             n_layer_mamba=8,
-            n_layer_mamba3=6,  # ~16M params for Phase 0
-            d_state_mamba3=32,
+            n_layer_mamba3=8,
+            d_state_mamba3=64,
             expand_mamba3=2,
             micro_batch=2,
             grad_accum=16,
@@ -101,8 +105,8 @@ def get_phase_config(phase: int, model_type: str) -> TrainConfig:
             d_ff_reduced=2748,
             d_state=32,
             n_layer_mamba=31,
-            n_layer_mamba3=24,  # 153.1M params (~152M target)
-            d_state_mamba3=32,
+            n_layer_mamba3=30,  # 149.9M params (~152M target, official Mamba3)
+            d_state_mamba3=64,
             expand_mamba3=2,
             micro_batch=2,
             grad_accum=128,
@@ -122,8 +126,8 @@ def get_phase_config(phase: int, model_type: str) -> TrainConfig:
             d_ff_reduced=2512,
             d_state=32,
             n_layer_mamba=49,
-            n_layer_mamba3=38,  # 373.5M params (~369M target)
-            d_state_mamba3=32,
+            n_layer_mamba3=48,  # 365.5M params (~369M target, official Mamba3)
+            d_state_mamba3=64,
             expand_mamba3=2,
             micro_batch=2,
             grad_accum=128,
@@ -144,8 +148,8 @@ def get_phase_config(phase: int, model_type: str) -> TrainConfig:
             d_ff_reduced=1832,
             d_state=32,
             n_layer_mamba=14,
-            n_layer_mamba3=11,
-            d_state_mamba3=32,
+            n_layer_mamba3=14,  # ~50M target, official Mamba3
+            d_state_mamba3=64,
             expand_mamba3=2,
             micro_batch=4,
             grad_accum=64,
