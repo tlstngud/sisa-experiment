@@ -327,6 +327,12 @@ Step 4000에 수직 점선 + SISA 값(14.8\%)에서 수평 점선이 Transformer
 
 SISA v2는 Step 3000(1.57B 토큰, 31\%)에서 14.40\%를 기록하며, 이는 Transformer 최종(13.88\%)을 이미 초과한다. 동일 성능에 약 \textbf{3배 적은 토큰}으로 도달한다.
 
+\figplace{
+\textbf{Figure 7: 학습 Loss 곡선.}
+X축: Training Step (0--9536). Y축: Training Loss (2.5--11).
+네 모델의 loss 곡선. 모두 유사한 초기값($\sim$11)에서 시작하여 하강. SISA(파란색)가 가장 빠르게 하강하고 최종 loss 3.12로 가장 낮음. Mamba-3(주황)가 근접(3.10). Transformer(초록)는 중반까지 느리다가 LR 감소 구간에서 가속(3.47$\to$3.14). Mamba-2(빨강)는 최종 3.13.
+}
+
 \subsection{스케일링}
 
 \begin{table}[h]
@@ -440,6 +446,14 @@ v1 ($\lambda$ bf16, 고정 0.31) & 4.81 & 11.14 & 13.10 & 15.39 & 16.13 \\
 
 Step 1000에서 +74\%의 차이가 발생하며, 이는 $\lambda$의 적응적 조절이 SSM 기여도 최적화에 필수적임을 보여준다.
 
+\subsection{벤치마크별 아키텍처 강점 분석}
+
+Table~\ref{tab:main}에서 SISA가 전 벤치마크 1위가 아닌 점에 주목한다.
+
+\paragraph{ARC-Easy에서 Mamba-3 우위 (37.0\% vs SISA 35.4\%).} ARC-Easy는 ``식물이 자라려면 무엇이 필요한가?''와 같은 사실 관계를 묻는다. SSM의 선형 재귀 $\mathbf{h}_t = \alpha_t \mathbf{h}_{t-1} + \mathbf{B}_t \mathbf{x}_t$는 학습 데이터에서 반복 출현하는 분포적 패턴을 상태에 효율적으로 축적한다. 완전한 재귀 구조인 Mamba-3가 이 축적에서 가장 효과적이고, SISA는 attention 내부의 가산적 bias를 통해 부분적으로만 이 효과를 획득한다. 그럼에도 SISA(35.4\%)는 Transformer(33.3\%)를 +2.1\%p 상회하여, SSM bias가 지식 과제에서도 기여함을 보여준다.
+
+\paragraph{HellaSwag에서의 근소한 차이.} 모든 모델이 25--27\% 범위에 분포하며, 152M 규모에서는 상식 추론 능력의 차별화가 제한적이다. 이 벤치마크의 랜덤 기준이 25\%이므로, 현재 수치는 랜덤 대비 1--2\%p의 미미한 차이에 해당한다.
+
 \subsection{Softmax에 의한 중요도 신호 희석}
 
 SISA의 우위가 LAMBADA(+3.85\%p)에서는 현저하나 HellaSwag(+1.2\%p)에서는 소폭인 이유: softmax가 attention weight의 합을 1로 강제하여 위치 간 경쟁을 만든다. content similarity가 이미 강한 과제에서는 가산적 SSM bias의 상대적 영향이 줄어든다.
@@ -460,7 +474,40 @@ SISA의 우위가 LAMBADA(+3.85\%p)에서는 현저하나 HellaSwag(+1.2\%p)에�
 \item \textbf{연산 효율}: SDPA 한 번으로 계산. SSM 계열 대비 1.2--1.6$\times$ 빠름.
 \end{enumerate}
 
-Score 수준 융합은 블록/헤드 수준과 구별되는 새로운 설계 축이다. 향후 연구로 sigmoid SISA, 1B+ 스케일 검증, 장문맥 학습을 계획한다.
+Score 수준 융합은 블록/헤드 수준과 구별되는 새로운 설계 축이다.
+
+\subsection{Limitations (한계점)}
+
+본 연구의 한계를 명시한다:
+
+\begin{enumerate}[leftmargin=*]
+\item \textbf{모델 규모.} 최대 369M 파라미터로, 현대 LLM 규모(7B+)에서의 검증이 이루어지지 않았다. Score 수준 융합의 이점이 대규모에서 유지·확대되는지는 추가 연구가 필요하다.
+
+\item \textbf{학습 데이터.} SlimPajama-6B에서 5B 토큰만 사용하였다. 동일 규모의 다른 연구(Mamba: 300B 토큰)와 비교하면 학습 데이터가 제한적이다. 다만 모든 모델이 동일한 데이터로 학습하였으므로 아키텍처 간 상대 비교의 타당성은 유지된다.
+
+\item \textbf{Softmax 병목.} Section 6.3에서 논의한 바와 같이, softmax 정규화가 SSM bias의 영향력을 제한한다. HellaSwag처럼 content similarity가 지배적인 과제에서 SISA의 우위가 소폭에 그치는 원인이다.
+
+\item \textbf{장문맥 일반화.} 학습 길이(2,048)를 넘는 문맥에서는 RoPE 외삽 한계로 성능이 급격히 하락한다. 장문맥 학습 또는 RoPE 스케일링 기법의 적용이 필요하다.
+
+\item \textbf{벤치마크 절대 수치.} 152M 규모의 모든 모델이 벤치마크 절대 수치에서 실용 수준에 미치지 못한다. 본 연구의 목적은 실용 모델 구축이 아닌, 아키텍처 설계 원리의 검증이다.
+\end{enumerate}
+
+\paragraph{향후 연구.} (1) Sigmoid SISA로 softmax 병목 해소. (2) 1B+ 규모 검증. (3) 장문맥 학습 (RoPE 스케일링 적용). (4) $\lambda$의 레이어별·헤드별 분포와 과제 특이적 패턴 분석.
+
+\subsection{Broader Impact (사회적 영향)}
+
+SISA는 언어 모델의 아키텍처적 개선을 제안하는 기초 연구이다. 언어 모델의 일반적인 위험(편향된 텍스트 생성, 허위 정보 등)은 SISA에도 동일하게 적용되며, 본 연구가 이를 악화시키거나 완화시키지는 않는다. SISA의 학습 효율 향상(동일 성능에 절반의 토큰)은 학습 비용과 에너지 소비를 줄일 수 있다는 점에서 긍정적 영향이 기대된다.
+
+\subsection{Reproducibility (재현성)}
+
+재현성을 위해 다음을 공개한다:
+\begin{itemize}[leftmargin=*]
+\item \textbf{코드}: 학습, 평가, 모델 구현 전체 코드 (GitHub, 비공개 $\to$ 논문 수락 시 공개)
+\item \textbf{체크포인트}: 모든 모델의 학습 체크포인트 (HuggingFace, 비공개 $\to$ 수락 시 공개)
+\item \textbf{하이퍼파라미터}: Table~\ref{tab:configs}와 부록 A에 전체 설정을 명시
+\item \textbf{벤치마크 결과}: 모든 step별 결과를 JSON으로 공개
+\item \textbf{하드웨어}: NVIDIA H100 80GB PCIe, bf16 혼합 정밀도
+\end{itemize}
 
 % ============================================================
 % 참고문헌
