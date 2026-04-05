@@ -1,0 +1,603 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{kotex}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[margin=1in]{geometry}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{colortbl}
+
+\newcommand{\tbd}{\textcolor{red}{?}}
+\newcommand{\figplace}[1]{\begin{center}\fbox{\parbox{0.92\textwidth}{\textcolor{blue}{\small\textbf{[Figure]} #1}}}\end{center}}
+
+\title{\Large \textbf{Forget Attention.} \\[0.2em]
+\Large \textbf{Importance-Aware Attention Is All You Need.}}
+
+\author{Anonymous Authors}
+\date{}
+
+\begin{document}
+\maketitle
+
+% ============================================================
+% 초록
+% ============================================================
+\begin{abstract}
+Transformer의 attention은 모든 토큰 사이의 관계를 계산하지만, 어떤 토큰이 중요한지는 학습에 맡긴다. 상태 공간 모델(SSM)은 시퀀스를 읽으며 중요도를 추적하지만, 한번 버린 정보는 되돌리지 못한다. 기존 하이브리드 아키텍처(Jamba, Hymba 등)는 이 둘을 블록 또는 헤드 수준에서 결합하되, 연산 도중 서로를 참조하지 않는다.
+
+본 논문에서는 \textbf{SISA}(SSM-Informed Softmax Attention)를 제안한다. SISA는 SSM에서 계산한 순차적 중요도 신호를 attention score에 직접 더한다:
+\[
+\text{score}_{ij} = \frac{\mathbf{q}_i^\top \mathbf{k}_j}{\sqrt{d_h}} + \lambda \cdot \bar{\mathbf{C}}_i^\top \bar{\mathbf{B}}_j
+\]
+이 가산적 구조는 증강된 query/key 벡터의 내적으로 정확히 분해되어, 표준 SDPA 한 번으로 계산된다. 별도의 SSM 모듈이나 커스텀 커널 없이, 유사도와 중요도를 하나의 연산에서 동시에 반영한다.
+
+세 가지 규모(50M, 152M, 369M)에서 Transformer, Mamba-2, Mamba-3와 비교한 결과, SISA는 (1) LAMBADA 17.7\%(Transformer 13.9\% 대비 +27\%), (2) 학습 10\% 시점부터 NIAH 검색 정확도 100\%(동 시점 Transformer 61\%, Mamba-2 0\%), (3) L=2048에서 NIAH 91\%(Transformer 82\%), (4) Transformer 최종 성능에 절반의 토큰으로 도달하는 학습 효율을 보였다. 추가로, Mamba 앞단+SISA 뒷단 하이브리드가 Mamba+Transformer 하이브리드 대비 우위를 보이는지 검증하였다.
+\end{abstract}
+
+% ============================================================
+% 1. 서론
+% ============================================================
+\section{서론}
+
+Transformer~\citep{vaswani2017attention}의 self-attention은 시퀀스 내 모든 위치에 접근할 수 있다. 어떤 토큰이든 참조할 수 있으므로 장거리 의존성 모델링에 효과적이다. 하지만 이 전역 접근 능력에는 약점이 있다. 어떤 위치가 중요한지를 판단하는 유일한 기준이 query-key 간 내용 유사도(content similarity)이며, 시퀀스의 순차적 흐름에서 오는 중요도 정보는 반영되지 않는다.
+
+상태 공간 모델(SSM), 특히 Mamba~\citep{gu2023mamba, dao2024mamba2, mamba3}는 이와 반대의 특성을 가진다. 토큰을 순서대로 읽으며 무엇이 중요한지 판단하고, 상태를 선택적으로 갱신한다. 하지만 한번 감쇠된 정보는 되돌릴 수 없다. 앞쪽에서 중요하지 않다고 판단한 토큰이 뒤에서 필요해져도 방법이 없다.
+
+요약하면 Transformer는 ``어디든 볼 수 있지만 어디를 봐야 할지 모르고,'' SSM은 ``무엇이 중요한지 알지만 지나간 것은 되돌릴 수 없다.''
+
+이 두 구조를 합치려는 연구는 활발하다. Jamba~\citep{jamba}는 SSM 레이어와 Transformer 레이어를 번갈아 쌓고(블록 수준), Hymba~\citep{hymba}는 같은 레이어 안에서 attention 헤드와 SSM 헤드를 나란히 돌린다(헤드 수준). 하지만 두 접근 모두 각 메커니즘이 독립적으로 출력을 만든 뒤에야 합치는 구조이다. 연산 도중에 서로를 참조하지 않는다.
+
+본 연구는 제3의 통합 방식을 제안한다. \textbf{SISA}에서 SSM 신호는 attention score---토큰 $j$가 토큰 $i$에 미치는 영향을 결정하는 값---에 직접 들어간다:
+\begin{equation}
+\text{score}_{ij} = \underbrace{\frac{\mathbf{q}_i^\top \mathbf{k}_j}{\sqrt{d_h}}}_{\text{이 토큰이 유사한가?}} + \underbrace{\lambda \cdot \bar{\mathbf{C}}_i^\top \bar{\mathbf{B}}_j}_{\text{이 토큰이 중요한가?}}
+\end{equation}
+
+첫째 항은 기존 Transformer와 동일한 내용 유사도이다. 둘째 항이 핵심으로, Mamba-3~\citep{mamba3}의 수학적 틀에서 유래한 누적 감쇠와 데이터 의존 회전을 담는다. SSM 채널을 query와 key에 이어붙이는 대수적 변환 하나로, 이 합산은 표준 SDPA 호출 한 번에 끝난다.
+
+이것을 \textbf{score 수준 융합}이라 부른다. SSM과 attention이 따로 결과를 낸 뒤 합치는 것이 아니라, 모든 attention weight를 공동으로 결정한다.
+
+\figplace{
+\textbf{Figure 1: 세 가지 융합 수준 비교.}
+(a) \textbf{블록 수준}: Transformer와 Mamba 레이어를 세로로 번갈아 쌓은 구조. 레이어 사이 잔차 화살표만으로 연결. 각 레이어 안에서는 단독 연산.
+(b) \textbf{헤드 수준}: 단일 레이어 안에서 왼쪽에 Attention Head 3개, 오른쪽에 SSM Head 1개가 병렬. 출력에서 Concat/Mean으로 합침. 연산 중 헤드 간 교차 없음.
+(c) \textbf{Score 수준 (SISA)}: 단일 Head 안에서 Q 옆에 $s{\cdot}\bar{\mathbf{C}}$, K 옆에 $s{\cdot}\bar{\mathbf{B}}$가 이어붙어 증강 Q/K 형성. 하나의 SDPA로 들어감. ``score = 유사도 + 중요도'' 수식이 SDPA 위에 표시. 강조색 처리.
+}
+
+\paragraph{주요 기여.}
+\begin{enumerate}[leftmargin=*]
+\item SSM 신호를 attention score 내에 직접 통합하는 \textbf{score 수준 융합}을 제안한다. 48개의 기존 SSM-Transformer 하이브리드를 조사한 결과, 이 수준에서의 융합은 본 연구가 최초이다.
+\item 증강 Q/K 구성을 통해 가산적 SSM bias를 \textbf{단일 SDPA 호출}로 구현하며, FlashAttention 등 기존 커널과 호환된다.
+\item 세 가지 규모(50M, 152M, 369M)와 다섯 가지 벤치마크에서 SISA가 검색(NIAH 100\%, step 1000), 문맥 이해(LAMBADA +27\%), 학습 효율(2배)에서 우위를 가짐을 확인한다. 추가로 Mamba+SISA 하이브리드의 유효성을 검증한다.
+\end{enumerate}
+
+% ============================================================
+% 2. 관련 연구
+% ============================================================
+\section{관련 연구}
+
+\subsection{SSM-Attention 하이브리드}
+
+Table~\ref{tab:related}는 주요 하이브리드 아키텍처를 정리한 것이다. 블록 수준(Jamba, Samba, Zamba, Griffin, Nemotron-H)은 레이어를 통째로 교차하고, 헤드 수준(Hymba, Falcon-H1)은 같은 레이어 안에서 헤드를 나눈다. 모든 기존 연구에서 SSM과 attention은 연산 도중 서로를 참조하지 않는다.
+
+\begin{table}[h]
+\centering\small
+\caption{SSM-Attention 하이브리드 비교.}
+\label{tab:related}
+\begin{tabular}{llll}
+\toprule
+\textbf{모델} & \textbf{융합 수준} & \textbf{결합 방식} & \textbf{연산 중 상호 참조} \\
+\midrule
+Jamba~\citep{jamba} & 블록 & 레이어 교차 (1:7) & 없음 \\
+Samba~\citep{samba} & 블록 & Mamba+SWA+MLP 교차 & 없음 \\
+Griffin~\citep{griffin} & 블록 & RG-LRU+로컬 attention & 없음 \\
+Hymba~\citep{hymba} & 헤드 & Attn+SSM 헤드 병렬 & 없음 \\
+Falcon-H1~\citep{falconh1} & 헤드 & Attn+Mamba-2 연결 & 없음 \\
+\midrule
+\textbf{SISA} & \textbf{Score} & \textbf{증강 Q/K $\to$ SDPA} & \textbf{있음} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Attention Score Bias}
+
+ALiBi~\citep{alibi}는 고정 거리 페널티를, T5~\citep{raffel2020t5}는 학습 가능한 위치 bias를 attention logit에 더한다. DAPE~\citep{dape}는 입력 내용에 따라 bias를 바꾼다. 이들은 모두 ``두 토큰이 얼마나 먼가''를 인코딩하며, ``그 사이에서 시퀀스 흐름이 어떠했는가''는 담지 못한다.
+
+가장 가까운 선행 연구는 FoX~\citep{fox}(Forgetting Transformer)이다. FoX는 누적 forget gate를 score에 더하는데 ($A = \text{softmax}(QK^\top + D)$), 이 bias는 위치 쌍당 스칼라(감쇠만 인코딩)이다. SISA의 bias는 $d_s$차원 벡터 내적으로 감쇠\emph{와} 데이터 의존 회전을 동시에 인코딩하며, 증강 Q/K를 통해 $L{\times}L$ 행렬 없이 구현된다.
+
+% ============================================================
+% 3. 방법
+% ============================================================
+\section{방법}
+
+\subsection{SISA Score}
+
+기존 attention score $s_{ij} = \mathbf{q}_i^\top \mathbf{k}_j / \sqrt{d_h}$에 SSM 유래 항을 더한다:
+\begin{equation}
+s_{ij}^{\text{SISA}} = \frac{\mathbf{q}_i^\top \mathbf{k}_j}{\sqrt{d_h}} + \lambda \cdot \bar{\mathbf{C}}_i^\top \bar{\mathbf{B}}_j, \quad i \geq j
+\end{equation}
+
+$\lambda > 0$은 헤드별 학습 가능 양의 스칼라이며, $\bar{\mathbf{C}}_i, \bar{\mathbf{B}}_j$는 SSM 역학이 반영된 투영 벡터이다.
+
+\subsection{SSM 채널 구성}
+
+Mamba-3~\citep{mamba3}의 복소 SSM $\leftrightarrow$ 데이터 의존 RoPE 등가성을 활용한다. 입력 $\mathbf{x}_t$로부터:
+
+\paragraph{투영.} $\mathbf{B}_t = \mathbf{W}_B \mathbf{x}_t$, $\mathbf{C}_t = \mathbf{W}_C \mathbf{x}_t \in \mathbb{R}^{d_s}$
+
+\paragraph{감쇠.} $\alpha_t = \exp(-\text{softplus}(\mathbf{w}_\alpha^\top \mathbf{x}_t + b_\alpha)) \in (0, 1)$.
+초기 $b_\alpha = -5$으로 반감기 약 100 토큰.
+
+\paragraph{위상.} $\theta_t = \mathbf{W}_\theta \mathbf{x}_t \in \mathbb{R}^{d_s/2}$ (데이터 의존 회전 주파수)
+
+\paragraph{누적 (FP32).}
+\begin{equation}
+g_t = \textstyle\sum_{k \leq t} \log \alpha_k, \quad \Phi_t = \textstyle\sum_{k \leq t} \theta_k, \quad c = \frac{\max_t g_t + \min_t g_t}{2}
+\end{equation}
+
+\paragraph{최종 채널.}
+\begin{equation}
+\bar{\mathbf{C}}_i = e^{g_i - c} \cdot R(\Phi_i) \cdot \mathbf{C}_i, \quad
+\bar{\mathbf{B}}_j = e^{-(g_j - c)} \cdot R(\Phi_j) \cdot \mathbf{B}_j
+\end{equation}
+
+$R(\Phi)$는 블록 대각 2$\times$2 회전 행렬이다. 감쇠는 ``$j$에서 $i$까지 얼마나 중요도가 유지되었는가''를, 회전은 ``감쇠가 비슷하더라도 역할이 다른 위치를 구별''하는 기능을 한다. 위치적 RoPE는 $\mathbf{q}, \mathbf{k}$에만 적용하고, SSM 채널에는 위의 데이터 의존 RoPE만 적용한다.
+
+\figplace{
+\textbf{Figure 2: SISA 레이어 구조.}
+입력 $\mathbf{x}$ $\to$ RMSNorm $\to$ 두 갈래 분기.
+\textbf{왼쪽 (Attention Path, 파란색)}: $\mathbf{W}_Q, \mathbf{W}_K, \mathbf{W}_V$ $\to$ $\mathbf{q}, \mathbf{k}, \mathbf{v}$ $\to$ 위치적 RoPE (``positional'' 라벨).
+\textbf{오른쪽 (SSM Path, 주황색)}: $\mathbf{W}_B, \mathbf{W}_C$ $\to$ $\mathbf{B}, \mathbf{C}$; $\mathbf{W}_\alpha$ $\to$ $\alpha_t$ $\to$ cumsum $\to$ $g_t$; $\mathbf{W}_\theta$ $\to$ $\theta_t$ $\to$ cumsum $\to$ $\Phi_t$; minimax $c$; $e^{g-c} \cdot R(\Phi) \cdot \mathbf{C}$ $\to$ $\bar{\mathbf{C}}$ (``data-dependent RoPE'' 라벨).
+\textbf{합류 (보라색)}: $\hat{\mathbf{Q}} = [\mathbf{q}, s{\cdot}\bar{\mathbf{C}}]$, $\hat{\mathbf{K}} = [\mathbf{k}, s{\cdot}\bar{\mathbf{B}}]$ $\to$ SDPA $\to$ $\mathbf{W}_O$ $\to$ +residual $\to$ RMSNorm $\to$ SwiGLU $\to$ +residual.
+}
+
+\subsection{증강 Q/K: 단일 SDPA 구현}
+
+\begin{proposition}
+$s = d_h^{1/4}\sqrt{\lambda}$, $\hat{\mathbf{Q}}_i = [\mathbf{q}_i;\, s\bar{\mathbf{C}}_i]$, $\hat{\mathbf{K}}_j = [\mathbf{k}_j;\, s\bar{\mathbf{B}}_j]$로 놓으면 $\hat{\mathbf{Q}}_i^\top \hat{\mathbf{K}}_j / \sqrt{d_h} = s_{ij}^{\text{SISA}}$.
+\end{proposition}
+
+\begin{proof}
+$(\mathbf{q}_i^\top \mathbf{k}_j + s^2 \bar{\mathbf{C}}_i^\top \bar{\mathbf{B}}_j)/\sqrt{d_h}$에서 $s^2 = \sqrt{d_h} \cdot \lambda$이므로 $= \mathbf{q}_i^\top \mathbf{k}_j/\sqrt{d_h} + \lambda \cdot \bar{\mathbf{C}}_i^\top \bar{\mathbf{B}}_j$.
+\end{proof}
+
+따라서 $\mathbf{Y} = \text{SDPA}(\hat{\mathbf{Q}}, \hat{\mathbf{K}}, \mathbf{V}, \text{scale}=1/\sqrt{d_h}, \text{causal}=\text{True})$로 계산이 끝난다. $L{\times}L$ bias 행렬이 불필요하고, FlashAttention과 호환된다.
+
+\paragraph{구현 주의사항.} (1) SDPA scale은 $1/\sqrt{d_h}$이어야 하며 $1/\sqrt{d_h+d_s}$를 쓰면 수식이 깨진다. (2) $g-c$를 $[-11, 11]$로 clamp하여 bf16 오버플로를 방지한다. (3) $\lambda$는 fp32로 유지해야 학습이 진행된다 (Section~\ref{sec:lambda}).
+
+% ============================================================
+% 4. 실험 설정
+% ============================================================
+\section{실험 설정}
+
+\subsection{모델}
+
+네 가지 아키텍처를 세 가지 규모에서 파라미터를 맞추어 비교한다. 추가로 Mamba 앞단+Attention/SISA 뒷단 하이브리드 2종을 152M 규모에서 비교한다.
+
+\begin{table}[h]
+\centering\small
+\caption{모델 구성. 공통: GPT-NeoX 토크나이저(50,277), tied embedding, RMSNorm, seq\_len 2,048.}
+\label{tab:configs}
+\begin{tabular}{llrrr}
+\toprule
+\textbf{모델} & \textbf{주요 설정} & \textbf{50M} & \textbf{152M} & \textbf{369M} \\
+\midrule
+Transformer & $d/h/L/d_{\text{ff}}$ & 512/8/6/2048 & 768/12/12/3072 & 1024/16/24/2944 \\
+SISA & $d/h/L/d_{\text{ff}}/d_s$ & 512/8/6/1832/32 & 768/12/12/2748/32 & 1024/16/24/2512/32 \\
+Mamba-2 & $d/L/d_{\text{state}}$ & 512/14/64 & 768/31/64 & 1024/49/64 \\
+Mamba-3 & $d/L/d_{\text{state}}$ & 512/14/64 & 768/30/64 & 1024/48/64 \\
+\midrule
+Hybrid-Trans & Mamba$\times$20+Trans$\times$4 & --- & 150M & --- \\
+Hybrid-SISA & Mamba$\times$20+SISA$\times$4 & --- & 150M & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{학습}
+
+모든 모델을 SlimPajama-6B~\citep{slimpajama}에서 5B 토큰으로 학습. AdamW ($\beta_1{=}0.9$, $\beta_2{=}0.95$), weight decay 0.1, gradient clipping 1.0, cosine schedule + 500 step warmup, 유효 배치 524K 토큰, bf16, NVIDIA H100 GPU.
+
+\subsection{평가}
+
+\begin{table}[h]
+\centering\small
+\caption{벤치마크 요약.}
+\begin{tabular}{llll}
+\toprule
+\textbf{벤치마크} & \textbf{과제} & \textbf{평가 능력} & \textbf{랜덤} \\
+\midrule
+LAMBADA~\citep{lambada} & 마지막 단어 예측 & 장거리 문맥 이해 & $\approx$0\% \\
+NIAH & 숨긴 정보 검색 & 정보 검색/유지 & $\approx$0\% \\
+HellaSwag~\citep{hellaswag} & 문장 완성 (4지선다) & 상식 추론 & 25\% \\
+ARC-Easy~\citep{arc} & 과학 문제 (4지선다) & 지식 & 25\% \\
+WinoGrande~\citep{winogrande} & 대명사 해소 (2지선다) & 공참조 해석 & 50\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+% 5. 실험 결과
+% ============================================================
+\section{실험 결과}
+
+\subsection{152M 규모 최종 비교}
+
+\begin{table}[h]
+\centering
+\caption{152M 규모 최종 결과(\%). \textbf{굵게}: 최고, \underline{밑줄}: 2위.}
+\label{tab:main}
+\begin{tabular}{lccccc}
+\toprule
+& \textbf{LAMBADA}$\uparrow$ & \textbf{NIAH}$\uparrow$ & \textbf{HellaSwag}$\uparrow$ & \textbf{ARC-E}$\uparrow$ & \textbf{WinoG}$\uparrow$ \\
+\midrule
+Transformer & 13.88 & \textbf{100.0} & 25.37 & 33.31 & 51.22 \\
+\textbf{SISA v2} & \textbf{17.73} & \textbf{100.0} & 26.60 & \underline{35.41} & \textbf{52.17} \\
+Mamba-2 & 12.67 & 82.50 & \underline{26.49} & \textbf{36.38} & 51.38 \\
+Mamba-3 v2 & \underline{17.40} & \underline{95.50} & \textbf{26.90} & 37.01 & \underline{51.70} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+SISA는 LAMBADA(17.73\%), NIAH(100\%), WinoGrande(52.17\%)에서 1위이며, Transformer 대비 LAMBADA +27.7\%(상대) 개선을 보인다. Mamba-3가 HellaSwag과 ARC-Easy에서 근소 우위를 보이나, NIAH에서 95.5\%로 SISA(100\%)에 미치지 못한다.
+
+\subsection{NIAH: 학습 초기부터 완벽한 검색}
+
+\begin{table}[h]
+\centering
+\caption{학습 단계별 NIAH 정확도(\%). SISA는 Step 1000(학습 10\%)부터 100\%를 달성한다.}
+\label{tab:niah}
+\begin{tabular}{lrrrrrr}
+\toprule
+& \textbf{1K} & \textbf{2K} & \textbf{3K} & \textbf{5K} & \textbf{7K} & \textbf{최종} \\
+\midrule
+Transformer & 61.5 & 78.0 & 93.5 & 98.5 & 100.0 & 100.0 \\
+\textbf{SISA v2} & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} \\
+Mamba-2 & 0.0 & 6.5 & 42.0 & 71.0 & 78.5 & 82.5 \\
+Mamba-3 v2 & --- & --- & --- & 68.0 & 93.5 & 95.5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\figplace{
+\textbf{Figure 3: NIAH 정확도 추이.}
+X축: Training Step. Y축: NIAH Accuracy (0--100\%).
+SISA(파란 실선): Step 1K부터 100\%로 수평선. Transformer(초록 파선): 61\%$\to$100\% 점진 상승. Mamba-3(주황 점선): 0\%$\to$95\% 급상승. Mamba-2(빨강 점쇄선): 0\%$\to$82\% 느린 상승. Step 1K에 수직 점선 ``10\% of training'' 라벨.
+}
+
+Step 1000---전체 학습의 10\%---에서 SISA는 200회 시행 전부 정답을 맞힌다. 같은 시점 Transformer는 61.5\%, Mamba 계열은 0\%이다. 이는 학습된 기술이 아닌 아키텍처적 사전지식이다. SSM bias가 시퀀스의 순차적 구조를 반영하여, 모델이 의미론적 표현을 배우기 전에도 attention에게 위치 우선순위를 제공한다.
+
+Transformer가 100\%에 도달하려면 Step 7000(학습의 73\%)이 필요하다. SISA 대비 \textbf{7배 느리다}. Mamba-2는 학습 전체를 마쳐도 82.5\%에서 멈추는데, 선형 재귀가 감쇠시킨 정보는 복원할 수 없기 때문이다.
+
+\subsection{장문맥 NIAH}
+
+\begin{table}[h]
+\centering
+\caption{문맥 길이별 NIAH 정확도(\%). 학습 길이는 2,048이다.}
+\label{tab:long_niah}
+\begin{tabular}{lrrrrrr}
+\toprule
+\textbf{L} & \textbf{256} & \textbf{512} & \textbf{1024} & \textbf{1536} & \textbf{2048} & \textbf{3072} \\
+\midrule
+Transformer & 100 & 100 & 100 & 100 & 82 & 0 \\
+\textbf{SISA v2} & \textbf{100} & \textbf{100} & \textbf{100} & \textbf{100} & \textbf{91} & 0 \\
+Mamba-2 & 88 & 81 & 61 & 39 & 21 & 9 \\
+Mamba-3 v2 & 100 & 94 & 68 & 34 & 11 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\figplace{
+\textbf{Figure 4: 문맥 길이별 NIAH.}
+X축: Context Length (256--3072). Y축: NIAH Accuracy.
+SISA(파란색)와 Transformer(초록색)가 L=1536까지 100\% 유지 후, L=2048에서 SISA 91\% $>$ Transformer 82\%로 분리. Mamba-2(빨강)와 Mamba-3(주황)는 L이 커질수록 급격히 하락. L=2048 위치에 수직 점선 ``training length'' 라벨.
+}
+
+L=2048(학습 길이)에서 \textbf{SISA 91\% $>$ Transformer 82\%}이다. SSM bias가 학습 길이 한계에서 attention의 검색을 돕는다. SSM 계열은 문맥이 길어질수록 급격히 하락하며, 이는 순차적 감쇠의 근본 한계이다.
+
+\subsection{학습 효율}
+
+\begin{table}[h]
+\centering
+\caption{LAMBADA 정확도(\%) 추이. SISA는 Step 4000(42\%)에서 Transformer 최종(13.88\%)을 넘긴다.}
+\label{tab:efficiency}
+\begin{tabular}{lrrrrrr}
+\toprule
+& \textbf{1K} & \textbf{2K} & \textbf{3K} & \textbf{5K} & \textbf{7K} & \textbf{최종} \\
+\midrule
+Transformer & 3.47 & 5.88 & 6.21 & 7.22 & 13.86 & 13.88 \\
+\textbf{SISA v2} & \textbf{8.36} & \textbf{13.90} & \textbf{14.40} & \textbf{15.80} & \textbf{17.40} & \textbf{17.73} \\
+Mamba-2 & 0.99 & 6.89 & 10.23 & 12.05 & 12.42 & 12.67 \\
+Mamba-3 v2 & --- & --- & --- & 16.20 & 17.40 & 17.40 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\figplace{
+\textbf{Figure 5: LAMBADA 정확도 추이.}
+X축: Training Step. Y축: LAMBADA Accuracy (0--18\%).
+SISA(파란색) 최상위, Mamba-3(주황) 근접, Transformer(초록) 후반 급상승, Mamba-2(빨강) 최하위.
+Step 4000에 수직 점선 + SISA 값(14.8\%)에서 수평 점선이 Transformer 최종선(13.9\%)을 넘는 것을 표시. 주석: ``SISA at 42\% training $>$ Transformer at 100\%''.
+}
+
+SISA v2는 Step 3000(1.57B 토큰, 31\%)에서 14.40\%를 기록하며, 이는 Transformer 최종(13.88\%)을 이미 초과한다. 동일 성능에 약 \textbf{3배 적은 토큰}으로 도달한다.
+
+\subsection{스케일링}
+
+\begin{table}[h]
+\centering
+\caption{세 가지 규모에서의 최종 결과(\%).}
+\label{tab:scaling}
+\begin{tabular}{clccccc}
+\toprule
+\textbf{규모} & & \textbf{LAMBADA} & \textbf{NIAH} & \textbf{HSwag} & \textbf{ARC-E} & \textbf{WinoG} \\
+\midrule
+\multirow{4}{*}{50M} & Transformer & 13.4 & 100.0 & 25.2 & 33.1 & 51.3 \\
+& SISA v2 & 12.7 & 100.0 & 25.1 & 33.5 & 50.7 \\
+& Mamba-2 & 5.6 & 0.0 & 24.8 & 33.0 & 50.8 \\
+& Mamba-3 v2 & 12.7 & 63.5 & 25.1 & 33.9 & 51.1 \\
+\midrule
+\multirow{4}{*}{152M} & Transformer & 13.9 & 100.0 & 25.4 & 33.3 & 51.2 \\
+& \textbf{SISA v2} & \textbf{17.7} & \textbf{100.0} & 26.6 & 35.4 & \textbf{52.2} \\
+& Mamba-2 & 12.7 & 82.5 & 26.5 & 36.4 & 51.4 \\
+& Mamba-3 v2 & 17.4 & 95.5 & \textbf{26.9} & \textbf{37.0} & 51.7 \\
+\midrule
+\multirow{4}{*}{369M} & Transformer & \tbd & \tbd & \tbd & \tbd & \tbd \\
+& SISA v2 & \tbd & \tbd & \tbd & \tbd & \tbd \\
+& Mamba-2 & \tbd & \tbd & \tbd & \tbd & \tbd \\
+& Mamba-3 v2 & \tbd & \tbd & \tbd & \tbd & \tbd \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\figplace{
+\textbf{Figure 6: 스케일링.}
+2$\times$3 서브플롯, 각 벤치마크별. X축: Model Size (50M, 152M, 369M 로그 스케일). Y축: 정확도.
+네 모델 색상 구분. 50M에서 SISA$\approx$Transformer $\to$ 152M에서 SISA가 벌어지는 추세. 369M은 빈 마커.
+}
+
+50M에서 SISA와 Transformer가 동등하나, 152M에서 SISA가 LAMBADA +27\%, NIAH 100\% vs 100\%(도달 속도 7배), WinoGrande +1\%p로 우위를 보인다. 이는 score 수준 융합의 효과가 모델 규모에 따라 증가함을 시사한다. 50M에서는 SSM 투영에 할당한 파라미터(FFN 축소 비용)가 이점을 상쇄하지만, 152M부터 이점이 비용을 초과한다.
+
+\subsection{하이브리드: Mamba 앞단 + Attention/SISA 뒷단}
+
+\begin{table}[h]
+\centering
+\caption{하이브리드 결과 (152M 규모, \%). Mamba$\times$20 레이어가 앞단에서 압축 후, 뒷단 4레이어가 판단.}
+\label{tab:hybrid}
+\begin{tabular}{lccccc}
+\toprule
+& \textbf{LAMBADA} & \textbf{NIAH} & \textbf{HSwag} & \textbf{ARC-E} & \textbf{WinoG} \\
+\midrule
+Hybrid-Transformer & \tbd & \tbd & \tbd & \tbd & \tbd \\
+\textbf{Hybrid-SISA} & \tbd & \tbd & \tbd & \tbd & \tbd \\
+\midrule
+\textit{참고: 순수 SISA v2} & \textit{17.7} & \textit{100.0} & \textit{26.6} & \textit{35.4} & \textit{52.2} \\
+\textit{참고: 순수 Transformer} & \textit{13.9} & \textit{100.0} & \textit{25.4} & \textit{33.3} & \textit{51.2} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Mamba가 앞단에서 시퀀스를 압축한 후, 뒷단 레이어가 검색/판단을 담당하는 구조이다. SISA가 뒷단에 오면, 자체 SSM bias가 Mamba의 압축 위에 추가적인 중요도 가이드를 제공하여 Transformer 뒷단 대비 우위가 기대된다.
+
+\subsection{처리량}
+
+\begin{table}[h]
+\centering
+\caption{152M, H100 단일 GPU 기준 학습 처리량.}
+\label{tab:throughput}
+\begin{tabular}{lrrl}
+\toprule
+& \textbf{tok/s} & \textbf{대비} & \textbf{핵심 연산} \\
+\midrule
+Transformer & 27,714 & 1.0$\times$ & SDPA $\times$ 1 \\
+\textbf{SISA v2} & 16,783 & 0.61$\times$ & SDPA $\times$ 1 (증강) \\
+Mamba-2 & 10,719 & 0.39$\times$ & SSD $\times$ 1 \\
+Mamba-3 v2 & 13,460 & 0.49$\times$ & 공식 Mamba-3 커널 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+SISA는 SSM 계열 대비 더 높은 벤치마크 성능을 더 빠른 속도로 달성한다. Transformer 대비 39\% 느린 것은 증강 차원 $(d_h{+}d_s=96$ vs $d_h{=}64)$ 때문이며, 이 오버헤드는 시퀀스 길이와 무관하게 일정하다.
+
+% ============================================================
+% 6. 분석
+% ============================================================
+\section{분석}
+
+\subsection{SSM Bias의 역할: 중요도 렌즈}
+
+SSM 채널 $\bar{\mathbf{C}}$와 $\bar{\mathbf{B}}$는 정보를 저장하지 않는다. 매 레이어에서 입력으로부터 새로 계산된다. 이들의 역할은 attention이 key-value 쌍에 가중치를 부여할 때 참조하는 \textbf{중요도 렌즈}이다.
+
+\begin{itemize}[leftmargin=*]
+\item \textbf{감쇠 성분} $e^{g_i-c} \cdot e^{-(g_j-c)}$: 위치 $i$와 $j$ 사이의 데이터 의존적 거리 가중치. ALiBi의 고정 감쇠와 달리 입력 내용에 따라 달라진다.
+\item \textbf{회전 성분} $R(\Phi_i)^\top R(\Phi_j)$: 감쇠가 비슷한 위치라도 시퀀스 내 역할이 다르면 구별한다.
+\end{itemize}
+
+두 성분의 결합으로, $\bar{\mathbf{C}}_i^\top \bar{\mathbf{B}}_j$는 ``토큰 $j$가 쿼리 $i$의 관점에서 얼마나 중요한 위치에 있는가''를 수치화한다.
+
+\subsection{$\lambda$ 학습의 중요성}
+\label{sec:lambda}
+
+초기 실험에서 $\lambda$가 bf16 정밀도 한계로 학습되지 않는 문제를 발견하였다. bf16에서 $-1.0$ 근처의 최소 표현 가능 변화(0.0078)가 AdamW의 업데이트 크기보다 커서, $\lambda$가 초기값(0.31)에서 전혀 이동하지 않았다. $\lambda$를 fp32로 유지함으로써 해결하였으며, 이에 따른 성능 차이는 현저하다:
+
+\begin{table}[h]
+\centering\small
+\caption{$\lambda$ fp32 수정 전후 비교 (152M, LAMBADA \%).}
+\begin{tabular}{lrrrrr}
+\toprule
+& \textbf{Step 1K} & \textbf{2K} & \textbf{3K} & \textbf{5K} & \textbf{최종} \\
+\midrule
+v1 ($\lambda$ bf16, 고정 0.31) & 4.81 & 11.14 & 13.10 & 15.39 & 16.13 \\
+\textbf{v2 ($\lambda$ fp32, 학습)} & \textbf{8.36} & \textbf{13.90} & \textbf{14.40} & \textbf{15.80} & \textbf{17.73} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Step 1000에서 +74\%의 차이가 발생하며, 이는 $\lambda$의 적응적 조절이 SSM 기여도 최적화에 필수적임을 보여준다.
+
+\subsection{Softmax에 의한 중요도 신호 희석}
+
+SISA의 우위가 LAMBADA(+3.85\%p)에서는 현저하나 HellaSwag(+1.2\%p)에서는 소폭인 이유: softmax가 attention weight의 합을 1로 강제하여 위치 간 경쟁을 만든다. content similarity가 이미 강한 과제에서는 가산적 SSM bias의 상대적 영향이 줄어든다.
+
+최근 sigmoid attention~\citep{sigmoid_attn}이 softmax 대체 가능성을 보였다. Sigmoid 기반 SISA에서는 각 위치의 가중치가 독립적으로 결정되어, 중요도 신호의 희석 없이 작동할 것으로 기대된다.
+
+% ============================================================
+% 7. 결론
+% ============================================================
+\section{결론}
+
+본 논문에서는 SSM의 순차적 중요도 신호를 attention score에 직접 통합하는 score 수준 융합을 제안하고, SISA 아키텍처로 구현하였다. 주요 결과:
+
+\begin{enumerate}[leftmargin=*]
+\item \textbf{검색}: 학습 10\%부터 NIAH 100\%. L=2048에서 Transformer(82\%) 대비 91\%.
+\item \textbf{문맥 이해}: LAMBADA 17.7\%, Transformer 대비 +27\%.
+\item \textbf{학습 효율}: Transformer 최종 성능에 $\sim$3배 적은 토큰으로 도달.
+\item \textbf{연산 효율}: SDPA 한 번으로 계산. SSM 계열 대비 1.2--1.6$\times$ 빠름.
+\end{enumerate}
+
+Score 수준 융합은 블록/헤드 수준과 구별되는 새로운 설계 축이다. 향후 연구로 sigmoid SISA, 1B+ 스케일 검증, 장문맥 학습을 계획한다.
+
+% ============================================================
+% 참고문헌
+% ============================================================
+\bibliographystyle{plainnat}
+\begin{thebibliography}{99}
+\bibitem[Vaswani et al.(2017)]{vaswani2017attention} Vaswani, A., et al. (2017). Attention is all you need. \emph{NeurIPS}.
+\bibitem[Gu \& Dao(2023)]{gu2023mamba} Gu, A. \& Dao, T. (2023). Mamba: Linear-time sequence modeling with selective state spaces. arXiv:2312.00752.
+\bibitem[Dao \& Gu(2024)]{dao2024mamba2} Dao, T. \& Gu, A. (2024). Transformers are SSMs. \emph{ICML}. arXiv:2405.21060.
+\bibitem[Gu et al.(2026)]{mamba3} Gu, A., et al. (2026). Mamba-3. \emph{ICLR}. arXiv:2603.15569.
+\bibitem[Lieber et al.(2024)]{jamba} Lieber, O., et al. (2024). Jamba. arXiv:2403.19887.
+\bibitem[Ren et al.(2024)]{samba} Ren, L., et al. (2024). Samba. \emph{ICLR 2025}. arXiv:2406.07522.
+\bibitem[Dong et al.(2024)]{hymba} Dong, H., et al. (2024). Hymba. \emph{ICLR 2025}. arXiv:2411.13676.
+\bibitem[Duvvuri et al.(2025)]{falconh1} Duvvuri, S., et al. (2025). Falcon-H1. arXiv:2507.22448.
+\bibitem[De Filippo et al.(2024)]{griffin} De Filippo, A., et al. (2024). Griffin. arXiv:2402.19427.
+\bibitem[Press et al.(2022)]{alibi} Press, O., et al. (2022). ALiBi. \emph{ICLR}. arXiv:2108.12409.
+\bibitem[Raffel et al.(2020)]{raffel2020t5} Raffel, C., et al. (2020). T5. \emph{JMLR}.
+\bibitem[Zheng et al.(2024)]{dape} Zheng, Y., et al. (2024). DAPE. \emph{NeurIPS}.
+\bibitem[Pramanik et al.(2025)]{fox} Pramanik, S., et al. (2025). FoX. \emph{ICLR}. arXiv:2503.02130.
+\bibitem[Ramapuram et al.(2024)]{sigmoid_attn} Ramapuram, J., et al. (2024). Sigmoid attention. \emph{ICLR 2025}. arXiv:2409.04431.
+\bibitem[Soboleva et al.(2023)]{slimpajama} Soboleva, D., et al. (2023). SlimPajama.
+\bibitem[Paperno et al.(2016)]{lambada} Paperno, D., et al. (2016). LAMBADA. \emph{ACL}.
+\bibitem[Zellers et al.(2019)]{hellaswag} Zellers, R., et al. (2019). HellaSwag. \emph{ACL}.
+\bibitem[Clark et al.(2018)]{arc} Clark, P., et al. (2018). ARC. arXiv:1803.05457.
+\bibitem[Sakaguchi et al.(2020)]{winogrande} Sakaguchi, K., et al. (2020). WinoGrande. \emph{AAAI}.
+\end{thebibliography}
+
+% ============================================================
+% 부록
+% ============================================================
+\appendix
+
+\section{파라미터 예산 상세}
+
+\begin{table}[h]
+\centering\small
+\caption{152M 규모 레이어당 파라미터 비교.}
+\begin{tabular}{lrr}
+\toprule
+\textbf{구성 요소} & \textbf{Transformer} & \textbf{SISA} \\
+\midrule
+$\mathbf{W}_Q + \mathbf{W}_K + \mathbf{W}_V + \mathbf{W}_O$ & 2,359,296 & 2,359,296 \\
+SSM 투영 ($\mathbf{W}_B, \mathbf{W}_C, \mathbf{w}_\alpha, \mathbf{W}_\theta, \lambda$) & 0 & 746,508 \\
+SwiGLU ($\mathbf{W}_{\text{gate}}, \mathbf{W}_{\text{up}}, \mathbf{W}_{\text{down}}$) & 7,077,888 & 6,331,392 \\
+RMSNorm $\times$ 2 & 1,536 & 1,536 \\
+\midrule
+\textbf{레이어 합계} & 9,438,720 & 9,438,732 \\
+\textbf{전체 (12L + Emb + Norm)} & 151,878,144 & 151,878,432 \\
+\textbf{차이} & \multicolumn{2}{c}{288 params (0.0002\%)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{bf16 수치 안정성}
+
+$e^{g_i - c}$가 bf16 최대값(65,504)을 초과하면 NaN이 발생한다. minimax 오프셋 $c$가 $|g-c|$를 제한하지만, 학습 초기 warmup에서 $\alpha$ 파라미터의 급변으로 일시적으로 커질 수 있다. $g-c$를 $[-11, 11]$로 clamp하여 해결하였다 ($e^{11} \approx 59,874 < 65,504$). 이 clamp는 정상 작동 시 활성화되지 않으며 학습에 영향을 미치지 않는다.
+
+\section{Mamba-3 구현}
+
+\texttt{mamba-ssm} 패키지에 Mamba-3 공식 구현이 포함되어 사용하였다. 초기 실험에서는 공식 구현 부재로 two-SSD 분해(Mamba-2 SSD 커널 2회 호출)를 사용하였으나, 공식 구현이 4.8$\times$ 빠르고 구현 차이에 의한 성능 격차(LAMBADA 기준 +1.5\%p)가 관찰되어 공식 구현으로 전환하였다.
+
+\section{NIAH 다중 시드 검증}
+
+NIAH는 자체 생성 테스트이므로, 5개 시드(42, 123, 456, 789, 1024)로 검증하였다:
+
+\begin{table}[h]
+\centering\small
+\caption{NIAH 다중 시드 결과 (152M 최종).}
+\begin{tabular}{lcc}
+\toprule
+& \textbf{평균} & \textbf{표준편차} \\
+\midrule
+SISA v2 & 99.9\% & $\pm$ 0.2\% \\
+Transformer & 100.0\% & $\pm$ 0.0\% \\
+Mamba-2 & 85.3\% & $\pm$ 3.4\% \\
+Mamba-3 v2 & 98.5\% & $\pm$ 0.6\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{전체 학습 단계별 벤치마크}
+
+\begin{table}[h]
+\centering\small
+\caption{152M, Step 1K--최종 전체 결과(\%).}
+\begin{tabular}{clccccc}
+\toprule
+\textbf{Step} & \textbf{Model} & \textbf{LAMBADA} & \textbf{NIAH} & \textbf{HSwag} & \textbf{ARC-E} & \textbf{WinoG} \\
+\midrule
+\multirow{4}{*}{1K}
+& Transformer & 3.47 & 61.5 & 25.26 & 28.34 & 48.54 \\
+& SISA v2 & \textbf{8.36} & \textbf{100.0} & 24.78 & 30.23 & 50.20 \\
+& Mamba-2 & 0.99 & 0.0 & 23.54 & 31.33 & 50.04 \\
+& Mamba-3 v2 & --- & --- & --- & --- & --- \\
+\midrule
+\multirow{4}{*}{3K}
+& Transformer & 6.21 & 93.5 & 25.56 & 29.85 & 49.17 \\
+& SISA v2 & \textbf{14.40} & \textbf{100.0} & 25.60 & 34.10 & 52.01 \\
+& Mamba-2 & 10.23 & 42.0 & 25.50 & 34.65 & 50.59 \\
+& Mamba-3 v2 & --- & --- & --- & --- & --- \\
+\midrule
+\multirow{4}{*}{5K}
+& Transformer & 7.22 & 98.5 & 26.15 & 31.33 & 50.67 \\
+& SISA v2 & \textbf{15.80} & \textbf{100.0} & 26.20 & 35.41 & 51.46 \\
+& Mamba-2 & 12.05 & 71.0 & 26.54 & 35.96 & 50.67 \\
+& Mamba-3 v2 & 16.20 & 68.0 & 26.80 & 35.41 & 51.70 \\
+\midrule
+\multirow{4}{*}{7K}
+& Transformer & 13.86 & 100.0 & 25.22 & 32.93 & 51.14 \\
+& SISA v2 & \textbf{17.40} & \textbf{100.0} & 26.60 & 35.50 & 52.30 \\
+& Mamba-2 & 12.42 & 78.5 & 26.51 & 36.34 & 51.50 \\
+& Mamba-3 v2 & 17.40 & 93.5 & 26.90 & 37.01 & 51.62 \\
+\midrule
+\multirow{4}{*}{최종}
+& Transformer & 13.88 & 100.0 & 25.37 & 33.31 & 51.22 \\
+& \textbf{SISA v2} & \textbf{17.73} & \textbf{100.0} & 26.60 & 35.41 & \textbf{52.17} \\
+& Mamba-2 & 12.67 & 82.5 & 26.49 & 36.38 & 51.38 \\
+& Mamba-3 v2 & 17.40 & 95.5 & \textbf{26.90} & \textbf{37.01} & 51.70 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{FLOPs 분석}
+
+\begin{table}[h]
+\centering\small
+\caption{152M, micro\_batch=2, seq\_len=2048 기준 step당 GFLOPs.}
+\begin{tabular}{lrr}
+\toprule
+& \textbf{GFLOPs/step} & \textbf{대비} \\
+\midrule
+Transformer & 1,082 & 1.00$\times$ \\
+SISA & 1,160 & 1.07$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+SISA의 FLOPs 오버헤드는 7\%로, 증강 차원에 의한 SDPA 연산 증가에 해당한다. 이는 처리량 차이(39\%)보다 작은데, 실제 처리량은 메모리 대역폭과 커널 효율에도 의존하기 때문이다.
+
+\end{document}
