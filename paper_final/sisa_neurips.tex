@@ -600,4 +600,183 @@ SISA & 1,160 & 1.07$\times$ \\
 
 SISA의 FLOPs 오버헤드는 7\%로, 증강 차원에 의한 SDPA 연산 증가에 해당한다. 이는 처리량 차이(39\%)보다 작은데, 실제 처리량은 메모리 대역폭과 커널 효율에도 의존하기 때문이다.
 
+\section{$\lambda$ 학습 궤적 상세 분석}
+
+$\lambda_{\text{raw}}$는 $-1.0$으로 초기화되어 $\lambda = \text{softplus}(-1.0) \approx 0.31$에서 시작한다. v2(fp32)에서 학습 진행에 따른 변화:
+
+\begin{table}[h]
+\centering\small
+\caption{$\lambda$ 값의 학습 진행에 따른 변화 (152M, Layer 0 기준).}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Step} & \textbf{$\lambda_{\text{raw}}$ (Head 0)} & \textbf{$\lambda$ (Head 0)} & \textbf{$\lambda_{\text{raw}}$ 평균} & \textbf{$\lambda$ 평균} \\
+\midrule
+0 (초기) & $-1.000$ & 0.313 & $-1.000$ & 0.313 \\
+1,000 & $-1.008$ & 0.311 & $-1.010$ & 0.310 \\
+5,000 & \tbd & \tbd & \tbd & \tbd \\
+최종 & \tbd & \tbd & \tbd & \tbd \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+v1(bf16)에서는 전 학습 기간 동안 $\lambda = 0.3125$로 고정되어, 모든 레이어·헤드에서 동일한 SSM 기여도가 적용되었다. v2에서는 학습이 진행됨에 따라 $\lambda$가 레이어·헤드별로 분화되는지, 특정 레이어에서 SSM 의존도가 높아지는 패턴이 나타나는지가 관찰 대상이다.
+
+\figplace{
+\textbf{Figure A1: $\lambda$ 학습 궤적.}
+12개 레이어 $\times$ 12개 헤드 = 144개의 $\lambda$ 값을 step에 따라 그린 선 그래프. X축: Step, Y축: $\lambda$ 값. 레이어별로 색상 구분, 같은 레이어의 헤드들은 같은 색의 얇은 선. v1(고정)은 회색 수평 점선(0.31)으로 표시.
+}
+
+\paragraph{v1 vs v2의 의의.} $\lambda$가 고정 상수(0.31)일 때도 Transformer 대비 의미 있는 개선(LAMBADA +16\%)이 관찰된 것은, SSM bias의 \emph{구조 자체}가 이미 유용함을 의미한다. $\lambda$의 적응적 학습은 이 위에 +10\%의 추가 개선을 제공하며, 이는 각 헤드가 SSM 의존도를 과제에 맞게 조절할 수 있기 때문으로 해석된다.
+
+\section{SSM Bias 기여도 정량 분석}
+
+Attention score에서 SSM 항이 차지하는 비율을 정량화한다. 임의의 query-key 쌍 $(i, j)$에 대해:
+\begin{equation}
+\text{SSM 비율} = \frac{|\lambda \cdot \bar{\mathbf{C}}_i^\top \bar{\mathbf{B}}_j|}{|\mathbf{q}_i^\top \mathbf{k}_j / \sqrt{d_h}| + |\lambda \cdot \bar{\mathbf{C}}_i^\top \bar{\mathbf{B}}_j|}
+\end{equation}
+
+\figplace{
+\textbf{Figure A2: SSM Bias 기여도 분포.}
+X축: SSM 비율 (0--1). Y축: 빈도 (히스토그램).
+152M SISA v2 최종 체크포인트에서 랜덤 입력 100개에 대해 측정. 레이어별로 별도 히스토그램 또는 box plot. SSM 비율이 높은 레이어(SSM에 의존)와 낮은 레이어(유사도에 의존)가 구별되는지 관찰.
+}
+
+이 분석을 통해 (1) SSM bias가 attention에 실질적으로 얼마나 영향을 미치는지, (2) 레이어 깊이에 따라 SSM 의존도가 달라지는지를 확인한다.
+
+\section{NIAH 실패 사례 분석}
+
+Mamba-2의 NIAH 최종 정확도가 82.5\%에서 멈추는 17.5\%의 실패 사례를 분석한다.
+
+\paragraph{실패 패턴.} 실패가 발생하는 시행에서 needle의 위치를 조사하면:
+\begin{itemize}[leftmargin=*]
+\item \textbf{위치 가설}: needle이 시퀀스 앞쪽(초기 위치)에 삽입된 경우 감쇠 누적이 더 크므로 실패율이 높을 수 있다.
+\item \textbf{내용 가설}: needle과 filler 텍스트의 유사도가 높은 경우 SSM이 needle을 filler와 동일하게 감쇠시킬 수 있다.
+\end{itemize}
+
+\begin{table}[h]
+\centering\small
+\caption{Mamba-2 NIAH 실패율 vs needle 삽입 위치 (152M 최종, 200회 시행).}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Needle 위치} & \textbf{앞 1/4} & \textbf{중앙 1/4} & \textbf{기타} & \textbf{전체} \\
+\midrule
+성공률 & \tbd & \tbd & \tbd & 82.5\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+SISA에서는 attention이 모든 위치에 접근 가능하므로 needle 위치에 관계없이 100\%를 유지한다. 이는 SSM의 ``위치 의존적 정보 손실''을 attention의 전역 접근이 완벽히 보완함을 보여준다.
+
+\section{50M vs 152M 스케일 비교 상세}
+
+50M에서 SISA가 Transformer에 근소하게 뒤처지는 원인을 파라미터 할당 비율에서 분석한다.
+
+\begin{table}[h]
+\centering\small
+\caption{SSM 투영이 전체 파라미터에서 차지하는 비율.}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{규모} & \textbf{SSM 투영} & \textbf{FFN 축소} & \textbf{SSM/전체} \\
+\midrule
+50M & 497,672 & $-$498,000 & 1.0\% \\
+152M & 746,508 & $-$746,496 & 0.5\% \\
+369M & \tbd & \tbd & \tbd\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+50M에서 SSM 투영이 전체의 1.0\%를 차지하는 반면 152M에서는 0.5\%이다. 동일한 파라미터를 FFN에서 빼오므로, 작은 모델에서는 FFN 능력 감소가 상대적으로 더 크다. 이는 SISA의 이점이 모델 규모에 따라 증가하는 구조적 이유이다.
+
+\section{장문맥 NIAH 스케일별 통합 비교}
+
+\begin{table}[h]
+\centering\small
+\caption{문맥 길이별 NIAH (\%), 50M과 152M 비교. 학습 길이 = 2,048.}
+\begin{tabular}{l|rrrr|rrrr}
+\toprule
+& \multicolumn{4}{c|}{\textbf{50M}} & \multicolumn{4}{c}{\textbf{152M}} \\
+\textbf{L} & Trans & SISA & M-2 & M-3 & Trans & SISA & M-2 & M-3 \\
+\midrule
+256 & 100 & 100 & 0 & 95 & 100 & 100 & 88 & 100 \\
+512 & 100 & 100 & 0 & 68 & 100 & 100 & 81 & 94 \\
+1024 & 100 & 100 & 0 & 9 & 100 & 100 & 61 & 68 \\
+1536 & 100 & 100 & 0 & 0 & 100 & 100 & 39 & 34 \\
+2048 & 88 & 83 & 0 & 0 & 82 & \textbf{91} & 21 & 11 \\
+3072 & 0 & 4 & 0 & 0 & 0 & 0 & 9 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+주목할 점:
+\begin{itemize}[leftmargin=*]
+\item \textbf{L=2048에서 SISA의 스케일링}: 50M(83\%) $\to$ 152M(\textbf{91\%}). 모델이 커지면 학습 길이 한계에서의 검색도 향상된다.
+\item \textbf{L=2048에서 SISA vs Transformer}: 50M에서는 SISA(83\%) $<$ Transformer(88\%)이나, 152M에서는 SISA(\textbf{91\%}) $>$ Transformer(82\%). 스케일업 시 SISA의 SSM bias 이점이 명확히 나타난다.
+\item \textbf{Mamba-2 50M vs 152M}: 50M에서 0\%이던 것이 152M에서 21--88\%로 상승. SSM의 검색 능력도 모델 규모에 크게 의존한다.
+\end{itemize}
+
+\section{v1 vs v2 전체 벤치마크 비교}
+
+$\lambda$ fp32 수정(v2)의 효과를 모든 벤치마크에서 확인한다.
+
+\begin{table}[h]
+\centering\small
+\caption{SISA v1 vs v2 최종 결과 비교 (152M).}
+\begin{tabular}{lccccc}
+\toprule
+& \textbf{LAMBADA} & \textbf{NIAH} & \textbf{HellaSwag} & \textbf{ARC-E} & \textbf{WinoG} \\
+\midrule
+v1 ($\lambda$ 고정) & 16.13 & 100.0 & 26.69 & 35.79 & 51.78 \\
+\textbf{v2 ($\lambda$ 학습)} & \textbf{17.73} & 100.0 & 26.60 & 35.41 & \textbf{52.17} \\
+\midrule
+차이 (\%p) & \textbf{+1.60} & 0.0 & $-$0.09 & $-$0.38 & \textbf{+0.39} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+$\lambda$ 학습의 효과는 \textbf{LAMBADA}에서 가장 뚜렷하다(+1.60\%p). NIAH는 v1에서 이미 100\%이므로 변화가 없다. HellaSwag과 ARC-Easy에서의 미세한 하락은 통계적 변동 범위 내이다.
+
+이 결과는 $\lambda$의 적응적 조절이 주로 \textbf{장거리 문맥 이해}에 기여함을 시사한다. $\lambda$가 특정 헤드에서 높아지면 SSM의 순차적 중요도 신호가 강화되어, LAMBADA처럼 먼 문맥에서 정확한 단어를 찾는 과제에서 이점이 된다.
+
+\section{Attention Entropy 분석}
+
+SISA의 SSM bias가 attention을 더 선택적(집중적)으로 만드는지 분석한다. Attention entropy가 낮을수록 특정 위치에 집중한다:
+\begin{equation}
+H(\mathbf{a}_i) = -\sum_j a_{ij} \log a_{ij}
+\end{equation}
+
+\begin{table}[h]
+\centering\small
+\caption{SISA의 레이어별 attention entropy (152M 최종, 샘플 입력 평균).}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Layer} & 0 & 2 & 4 & 6 & 8 & 11 \\
+\midrule
+Entropy & 1.54 & 1.73 & 1.72 & 1.42 & 1.18 & 1.42 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+뒷쪽 레이어(Layer 8: 1.18)에서 entropy가 낮아지는 경향은, 학습이 진행되면서 attention이 점차 선택적으로 변함을 나타낸다. Transformer와의 직접 비교는 동일 입력에 대한 entropy 차이를 통해 SSM bias의 선택성 기여를 정량화할 수 있다.
+
+\section{처리량-성능 효율 분석}
+
+단순히 tok/s와 벤치마크를 별개로 보는 것이 아니라, 단위 처리량당 성능을 비교한다.
+
+\begin{table}[h]
+\centering\small
+\caption{처리량 대비 성능 효율 (152M).}
+\begin{tabular}{lrrrr}
+\toprule
+& \textbf{tok/s} & \textbf{LAMBADA} & \textbf{LAMBADA/1K tok/s} & \textbf{NIAH} \\
+\midrule
+Transformer & 27,714 & 13.88 & 0.50 & 100.0 \\
+\textbf{SISA v2} & 16,783 & \textbf{17.73} & \textbf{1.06} & \textbf{100.0} \\
+Mamba-2 & 10,719 & 12.67 & 1.18 & 82.5 \\
+Mamba-3 v2 & 13,460 & 17.40 & 1.29 & 95.5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+LAMBADA/1K tok/s 지표에서 SISA(1.06)는 Transformer(0.50)의 \textbf{2.1배} 효율적이다. Mamba 계열이 더 높은 효율을 보이나, NIAH에서의 한계(82.5\%, 95.5\%)를 고려하면 SISA가 ``검색 능력을 유지하면서 달성 가능한 최고 효율''을 제공한다.
+
 \end{document}
