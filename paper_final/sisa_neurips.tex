@@ -38,7 +38,7 @@ Transformer의 attention은 모든 토큰 사이의 관계를 계산하지만, �
 \]
 이 가산적 구조는 증강된 query/key 벡터의 내적으로 정확히 분해되어, 표준 SDPA 한 번으로 계산된다. 별도의 SSM 모듈이나 커스텀 커널 없이, 유사도와 중요도를 하나의 연산에서 동시에 반영한다.
 
-세 가지 규모(50M, 152M, 369M)에서 Transformer, Mamba-2, Mamba-3와 비교한 결과, SISA는 (1) LAMBADA 17.7\%(Transformer 13.9\% 대비 +27\%), (2) 학습 10\% 시점부터 NIAH 검색 정확도 100\%(동 시점 Transformer 61\%, Mamba-2 0\%), (3) L=2048에서 NIAH 91\%(Transformer 82\%), (4) Transformer 최종 성능에 절반의 토큰으로 도달하는 학습 효율을 보였다. 추가로, Mamba 앞단+SISA 뒷단 하이브리드가 Mamba+Transformer 하이브리드 대비 우위를 보이는지 검증하였다.
+세 가지 규모(50M, 152M, 369M)에서 Transformer, Mamba-2, Mamba-3와 비교한 결과, SISA는 (1) LAMBADA 17.7\%(Transformer 13.9\% 대비 +27\%), (2) 학습 10\% 시점부터 NIAH 검색 정확도 100\%(동 시점 Transformer 61\%, Mamba-2 0\%), (3) L=2048에서 NIAH 91\%(Transformer 82\%), (4) Transformer 최종 성능에 절반의 토큰으로 도달하는 학습 효율을 보였다. 추가로, Mamba 앞단+SISA 뒷단 하이브리드가 Mamba+Transformer 하이브리드 대비 우위를 보이는지 검증한다.
 \end{abstract}
 
 % ============================================================
@@ -239,7 +239,7 @@ WinoGrande~\citep{winogrande} & 대명사 해소 (2지선다) & 공참조 해석
 Transformer & 13.88 & \textbf{100.0} & 25.37 & 33.31 & 51.22 \\
 \textbf{SISA v2} & \textbf{17.73} & \textbf{100.0} & 26.60 & \underline{35.41} & \textbf{52.17} \\
 Mamba-2 & 12.67 & 82.50 & \underline{26.49} & \textbf{36.38} & 51.38 \\
-Mamba-3 v2 & \underline{17.40} & \underline{95.50} & \textbf{26.90} & 37.01 & \underline{51.70} \\
+Mamba-3 v2 & \underline{17.40} & \underline{95.50} & \textbf{26.90} & \textbf{37.01} & \underline{51.70} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -304,7 +304,7 @@ L=2048(학습 길이)에서 \textbf{SISA 91\% $>$ Transformer 82\%}이다. SSM b
 
 \begin{table}[h]
 \centering
-\caption{LAMBADA 정확도(\%) 추이. SISA는 Step 4000(42\%)에서 Transformer 최종(13.88\%)을 넘긴다.}
+\caption{LAMBADA 정확도(\%) 추이. SISA는 Step 3000(31\%)에서 Transformer 최종(13.88\%)을 넘긴다.}
 \label{tab:efficiency}
 \begin{tabular}{lrrrrrr}
 \toprule
@@ -429,7 +429,7 @@ SSM 채널 $\bar{\mathbf{C}}$와 $\bar{\mathbf{B}}$는 정보를 저장하지 �
 \subsection{$\lambda$ 학습의 중요성}
 \label{sec:lambda}
 
-초기 실험에서 $\lambda$가 bf16 정밀도 한계로 학습되지 않는 문제를 발견하였다. bf16에서 $-1.0$ 근처의 최소 표현 가능 변화(0.0078)가 AdamW의 업데이트 크기보다 커서, $\lambda$가 초기값(0.31)에서 전혀 이동하지 않았다. $\lambda$를 fp32로 유지함으로써 해결하였으며, 이에 따른 성능 차이는 현저하다:
+초기 실험에서 $\lambda$가 bf16 정밀도 한계로 학습되지 않는 문제를 발견하였다. bf16에서 $-1.0$ 근처의 최소 표현 가능 변화가 0.0078인데, AdamW의 업데이트 크기($\sim$$10^{-5}$)가 이보다 훨씬 작아서, $\lambda$가 초기값(0.31)에서 전혀 이동하지 않았다. $\lambda$를 fp32로 유지함으로써 해결하였으며, 이에 따른 성능 차이는 현저하다:
 
 \begin{table}[h]
 \centering\small
@@ -485,7 +485,7 @@ Score 수준 융합은 블록/헤드 수준과 구별되는 새로운 설계 축
 
 \item \textbf{학습 데이터.} SlimPajama-6B에서 5B 토큰만 사용하였다. 동일 규모의 다른 연구(Mamba: 300B 토큰)와 비교하면 학습 데이터가 제한적이다. 다만 모든 모델이 동일한 데이터로 학습하였으므로 아키텍처 간 상대 비교의 타당성은 유지된다.
 
-\item \textbf{Softmax 병목.} Section 6.3에서 논의한 바와 같이, softmax 정규화가 SSM bias의 영향력을 제한한다. HellaSwag처럼 content similarity가 지배적인 과제에서 SISA의 우위가 소폭에 그치는 원인이다.
+\item \textbf{Softmax 병목.} Section 6.4에서 논의한 바와 같이, softmax 정규화가 SSM bias의 영향력을 제한한다. HellaSwag처럼 content similarity가 지배적인 과제에서 SISA의 우위가 소폭에 그치는 원인이다.
 
 \item \textbf{장문맥 일반화.} 학습 길이(2,048)를 넘는 문맥에서는 RoPE 외삽 한계로 성능이 급격히 하락한다. 장문맥 학습 또는 RoPE 스케일링 기법의 적용이 필요하다.
 
