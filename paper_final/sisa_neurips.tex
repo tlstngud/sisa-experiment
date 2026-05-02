@@ -319,7 +319,7 @@ NIAH(Needle-in-a-Haystack)는 자체 구성한 200회 시행 테스트이다. �
 
 \begin{table}[h]
 \centering
-\caption{152M 규모 step 9,000 결과(\%). \textbf{굵게}: 최고, \underline{밑줄}: 2위. SISA는 4개의 $d_s$ 값을 비교한다.}
+\caption{152M 규모 최종 결과 (5B tokens, step 9,536) (\%). \textbf{굵게}: 최고, \underline{밑줄}: 2위. SISA는 4개의 $d_s$ 값을 비교한다.}
 \label{tab:main}
 \begin{tabular}{lccccc}
 \toprule
@@ -734,7 +734,7 @@ SSM 채널 차원 $d_s \in \{16, 32, 64, 128\}$에 대해 세 가지 모델 규�
 
 \begin{table}[h]
 \centering\small
-\caption{50M 규모 $d_s$ ablation (step 9,536, 5B tokens). $d_s = 32$는 paper 원본 데이터, $d_s \in \{16, 64, 128\}$는 본 연구.}
+\caption{50M 규모 $d_s$ ablation (step 9,000). $d_s = 32$는 paper 원본 데이터, $d_s \in \{16, 64, 128\}$는 본 연구.}
 \label{tab:ds_50m}
 \begin{tabular}{lrcccccc}
 \toprule
@@ -778,7 +778,7 @@ Transformer & --- & 3072 & 13.88 & 100.0 & 25.4 & 33.3 & 51.2 \\
 
 \begin{table}[h]
 \centering\small
-\caption{369M 규모 $d_s$ ablation. $d_s = 32, 64$는 step 9,000+, $d_s = 16, 128$은 step 3,000 (학습 진행 중).}
+\caption{369M 규모 $d_s$ ablation. paper 변형은 step 9,536 (5B tokens), mb=4 retrain은 step 9,000.}
 \label{tab:ds_369m}
 \begin{tabular}{lrccccccc}
 \toprule
