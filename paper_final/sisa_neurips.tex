@@ -38,7 +38,7 @@ Transformer의 attention은 모든 토큰 사이의 관계를 계산하지만, �
 \]
 이 가산적 구조는 증강된 query/key 벡터의 내적으로 정확히 분해되어, 표준 SDPA 한 번으로 계산된다. 별도의 SSM 모듈이나 커스텀 커널 없이, 유사도와 중요도를 하나의 연산에서 동시에 반영한다.
 
-세 가지 규모(50M, 152M, 369M)에서 Transformer, Mamba-2, Mamba-3와 비교한 결과 (mb=4 fair comparison), SISA는 두 패러다임의 장점을 결합한다: (1) \textbf{Transformer 대비 50M/152M에서 우위} (152M LAMBADA 17.3\% vs 13.9\%, 상대 +24\%), 369M에서는 SISA $d_s=32$가 동등 (15.4 = 15.4); (2) \textbf{Transformer-수준 검색 능력} (NIAH 100\%, 학습 10\% 시점부터; Mamba-3는 152M 99\%, 369M 86.5\%로 NIAH 한계), (3) \textbf{단일 SDPA 호출}로 FlashAttention 등 기존 커널과 완전 호환 (Mamba-3 대비 +25\% 처리량). Mamba-3와 비교하면, SISA는 \textit{검색 (NIAH)과 인프라 호환성에서 우위}를 보이며, \textit{long-tail context tracking (369M LAMBADA)에서는 Mamba-3의 full SSM 재귀가 약간 우세}하다. SISA는 단순한 architectural 승자가 아닌, ``Transformer의 검색 능력 + SSM의 중요도 신호''를 단일 attention 연산에 통합한 새로운 \textbf{score-level fusion} 패러다임으로 자리잡는다.
+세 가지 규모(50M, 152M, 369M)에서 Transformer, Mamba-2, Mamba-3와 비교한 결과 (mb=4 fair comparison), SISA는 두 패러다임의 장점을 결합한다: (1) \textbf{Transformer 대비 50M/152M에서 우위} (152M LAMBADA 17.3\% vs 13.9\%, 상대 +24\%), 369M에서는 약간 낮음 (mb=4 retrain 14.8 vs 15.4; paper d_s=32 mb=2 setup으로는 동등 15.4=15.4); (2) \textbf{Transformer-수준 검색 능력} (NIAH 100\%, 학습 10\% 시점부터; Mamba-3는 152M 99\%, 369M 86.5\%로 NIAH 한계), (3) \textbf{단일 SDPA 호출}로 FlashAttention 등 기존 커널과 완전 호환 (Mamba-3 대비 +25\% 처리량). Mamba-3와 비교하면, SISA는 \textit{검색 (NIAH)과 인프라 호환성에서 우위}를 보이며, \textit{long-tail context tracking (369M LAMBADA)에서는 Mamba-3의 full SSM 재귀가 약간 우세}하다. SISA는 단순한 architectural 승자가 아닌, ``Transformer의 검색 능력 + SSM의 중요도 신호''를 단일 attention 연산에 통합한 새로운 \textbf{score-level fusion} 패러다임으로 자리잡는다.
 \end{abstract}
 
 % ============================================================
