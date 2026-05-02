@@ -85,7 +85,7 @@ Transformer~\citep{vaswani2017attention}의 self-attention은 시퀀스 내 모�
 \begin{enumerate}[leftmargin=*]
 \item SSM 신호를 attention score 내에 직접 통합하는 \textbf{score 수준 융합 (score-level fusion)}을 제안한다. 48개의 기존 SSM-Transformer 하이브리드를 조사한 결과, 이 수준에서의 융합은 본 연구가 최초이다.
 \item 증강 Q/K 구성을 통해 가산적 SSM bias를 \textbf{단일 SDPA 호출}로 구현하며, FlashAttention 등 기존 커널과 호환된다 (Mamba 계열의 커스텀 CUDA 커널 의존성 제거).
-\item \textbf{Transformer 대비 모든 규모에서 우위}: 152M LAMBADA +3.4\%p (상대 +24\%), 50M +1.0\%p, 369M +0.4\%p. 학습 10\% 시점에 이미 NIAH 100\% 달성으로 검색 능력 보존.
+\item \textbf{Transformer 대비 우위}: 152M LAMBADA +3.4\%p (상대 +24\%), 50M +1.0\%p. 369M에서는 SISA $d_s=32$ paper 변형이 Transformer와 동등 (15.4 = 15.4). 학습 10\% 시점에 이미 NIAH 100\% 달성으로 검색 능력 보존.
 \item \textbf{Mamba-3와의 명확한 trade-off 분석}: SISA는 (a) NIAH (정보 검색)에서 100\% 빠른 수렴 — Mamba-3는 학습 후반에야 도달; (b) FlashAttention 호환과 +25\% 처리량 우위; (c) 152M에서 LAMBADA Mamba-3 능가 (17.3 vs 15.5). 반면 369M LAMBADA에서는 Mamba-3의 full SSM이 약간 우수 (17.1 vs 14.8). 이는 architecture-별 강점의 명확한 분리를 보여준다.
 \item \textbf{$d_s$ scaling 분석}: $d_s \in \{16, 32, 64, 128\}$ 체계적 ablation을 세 가지 규모에서 수행, FFN 축소율과 SSM 채널 크기의 trade-off를 정량화. Scale-adaptive $d_s$ 선택 가이드 제시.
 \end{enumerate}
@@ -327,9 +327,9 @@ NIAH(Needle-in-a-Haystack)는 자체 구성한 200회 시행 테스트이다. �
 \midrule
 Transformer & 13.9 & \textbf{100.0} & 25.4 & 33.3 & 51.2 \\
 Mamba-2 & 12.7 & 82.5 & 26.5 & \textbf{36.4} & 51.4 \\
-Mamba-3 & 15.5 & 99.0 & 26.0 & 34.9 & \underline{52.7} \\
+Mamba-3 & 15.5 & 99.0 & 26.0 & 34.9 & \textbf{52.7} \\
 \midrule
-\textbf{SISA $d_s = 16$} & \textbf{17.3} & \textbf{100.0} & \textbf{26.9} & 34.7 & \textbf{52.5} \\
+\textbf{SISA $d_s = 16$} & \textbf{17.3} & \textbf{100.0} & \textbf{26.9} & 34.7 & \underline{52.5} \\
 SISA $d_s = 32$ (paper) & 16.1 & \textbf{100.0} & \underline{26.7} & \underline{35.8} & 51.8 \\
 SISA $d_s = 64$ & \underline{16.8} & \textbf{100.0} & 26.6 & 35.4 & 50.8 \\
 SISA $d_s = 128$ & 16.8 & \textbf{100.0} & 26.0 & 35.0 & 51.9 \\
@@ -379,7 +379,7 @@ Mamba-3 & 0.0 & 61.0 & 96.5 & 86.0 & 97.5 & 99.0 \\
   \item Step: 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 9536
   \item \textbf{SISA} (파란 실선, 두께 2.5pt, marker='o'): [100, 100, 100, 100, 100, 100, 100, 100, 100, 100]
   \item Transformer (초록 파선, 두께 2pt, marker='s'): [61.5, 78.0, 93.5, 93.5, 98.5, 100, 100, 100, 100, 100]
-  \item Mamba-3 (주황 점선, 두께 2pt, marker='^'): [0, 72, 75.5, 84.5, 68, 89.5, 93.5, 99, 99, 99]
+  \item Mamba-3 (주황 점선, 두께 2pt, marker='^'): [0, 61, 96.5, 95.5, 86, 96.5, 97.5, 99, 99, 99]
   \item Mamba-2 (빨강 점쇄선, 두께 2pt, marker='v'): [0, 6.5, 42, 53.5, 71, 80.5, 78.5, 81, 82.5, 82.5]
 \end{itemize}
 
@@ -506,7 +506,7 @@ SISA는 Step 2000(21\%)에서 13.9\%를 기록하며, 이는 Transformer 최종(
 
 \paragraph{152M (33 tok/param).} SISA $d_s = 16$이 LAMBADA 17.3\%로 \textit{모든 비교 모델 중 1위}. Transformer(+3.4\%p), Mamba-3(+1.8\%p), Mamba-2(+4.6\%p) 모두 능가. NIAH 100\%, HellaSwag 26.9, WinoGrande 52.5도 1위를 기록하여 SSM 계열의 강자 Mamba-3를 4개 벤치마크에서 능가한다.
 
-\paragraph{369M (13.5 tok/param, undertrained).} 가장 큰 규모에서 모든 모델이 Chinchilla optimal (20$\times$) 미만의 13.5$\times$로 학습되어 architecture 차이가 일부 흐려진다. 본 연구는 $d_s$를 128로 확장 (SSM 비중 34\%, FFN 24\%)한 retrain을 수행, step 9,000에 LAMBADA 14.8\% 도달. \textbf{Mamba-3 (17.1\%)는 369M LAMBADA에서 우위}를 유지하며, 이는 full SSM 재귀 구조가 long-tail context tracking에서 더 sample-efficient함을 시사한다. 그러나 SISA는 (1) NIAH 100\% 빠른 수렴 (Mamba-3는 step 6,000+에 도달), (2) FlashAttention 호환과 +25\% 처리량 우위, (3) Transformer (15.4) 대비 약간 낮으나 동등 수준 LAMBADA를 보여, \textit{검색 중심 또는 인프라 호환이 중요한 시나리오에서 명확한 우위}를 가진다. SISA와 Mamba-3는 \textbf{서로 다른 강점을 가진 trade-off architectural choice}로 자리잡는다.
+\paragraph{369M (13.5 tok/param, undertrained).} 가장 큰 규모에서 모든 모델이 Chinchilla optimal (20$\times$) 미만의 13.5$\times$로 학습되어 architecture 차이가 일부 흐려진다. 본 연구는 $d_s$를 128로 확장 (SSM 비중 34\%, FFN 24\%)한 retrain을 수행, step 9,000에 LAMBADA 14.8\% 도달. \textbf{Mamba-3 (17.1\%)는 369M LAMBADA에서 우위}를 유지하며, 이는 full SSM 재귀 구조가 long-tail context tracking에서 더 sample-efficient함을 시사한다. 그러나 SISA는 (1) NIAH 100\% 빠른 수렴 (Mamba-3 paper 100\%, mb=4 retrain은 86.5\%로 저하), (2) FlashAttention 호환과 +25\% 처리량 우위, (3) paper $d_s=32$ 변형이 Transformer (15.4)와 LAMBADA 동등 (15.4 = 15.4)을 보여, \textit{검색 중심 또는 인프라 호환이 중요한 시나리오에서 명확한 우위}를 가진다. SISA와 Mamba-3는 \textbf{서로 다른 강점을 가진 trade-off architectural choice}로 자리잡는다.
 
 \figplace{
 \textbf{Figure 6: Scaling Behavior — Architecture Comparison Across Scales.}
@@ -688,7 +688,7 @@ Transformer 기준 FFN 비중은 규모 증가에 따라 37.1\%(50M) $\to$ 55.9\
 
 \textbf{2. $d_s = 32$의 스케일 의존적 악화.} 50M, 152M에서 10.5\%로 동일하나, 369M에서 14.7\%로 증가. 이는 $d_s$를 고정하면 regime 간 성능 특성이 달라질 수 있음을 시사한다. SSM 파라미터($\propto L \cdot d \cdot h \cdot d_s$)의 증가율이 FFN($\propto L \cdot d \cdot d_{\text{ff}}$)보다 빠른 이유는, 50M$\to$369M에서 $h$가 $2\times$, $L$이 $4\times$, $d$가 $2\times$ 증가하여 SSM이 $16\times$ 증가하는 반면 FFN은 $11.5\times$만 증가하기 때문이다.
 
-\textbf{3. $d_s = 64$의 극단적 비용.} 369M에서 FFN을 29.2\% 축소하며, 이는 FFN 비중(41.6\%)이 SSM 비중(17.2\%)의 2.4배로 근접함을 의미한다. 그럼에도 불구하고 실험 결과(Section~\ref{sec:ds_ablation}) $d_s=64$는 NIAH와 LAMBADA에서 최고 성능을 보이며, \textit{SSM 용량 이득이 FFN 희생을 초과하는 regime}의 존재를 증명한다.
+\textbf{3. $d_s = 64$의 극단적 비용.} 369M에서 FFN을 29.2\% 축소하며, 이는 FFN 비중(41.6\%)이 SSM 비중(17.2\%)의 2.4배로 근접함을 의미한다. 50M 규모(FFN 축소 20.9\%)에서는 $d_s=64$가 LAMBADA(14.40\%)와 WinoGrande(52.4\%) 최고 성능을 보여 \textit{SSM 용량 이득이 FFN 희생을 초과하는 regime}의 존재를 증명한다. 그러나 369M 규모에서는 FFN 축소가 더 치명적이어서 $d_s=64$가 LAMBADA 13.10\%로 가장 낮은 성능을 보인다 (Section~\ref{sec:ds_ablation}).
 
 이 세 가지 비율 구조는 Section~\ref{sec:ds_ablation}의 ablation 실험에서 서로 다른 성능 특성으로 발현된다.
 
@@ -799,7 +799,7 @@ Mamba-3 (mb=4 retrain) & --- & --- & 9000 & \textbf{17.35} & 86.5 & 26.81 & 35.0
 
 \textbf{핵심 발견 2: SISA가 NIAH에서 압도적 우위.} 모든 SISA variants가 NIAH 100\%, Mamba-3 (mb=4 retrain)는 86.5\%에 정체. 이는 \textit{attention 기반 검색 능력의 보존}이 SISA의 핵심 강점임을 보여준다.
 
-\textbf{핵심 발견 3: 우리 retrain 내에서 $d_s = 128 > d_s = 64 > d_s = 32$.} 동일 mb=4 방식 비교에서 $d_s$ 값이 클수록 LAMBADA 향상 (13.99 → 13.10$^*$ → 14.83). $^*$$d_s = 64$는 mb=4→8 mixed로 약간의 noise 포함.
+\textbf{핵심 발견 3: 우리 retrain 내에서 $d_s = 128$ 최고.} 동일 mb=4 방식 비교에서 LAMBADA: $d_s=128$ (14.83) > $d_s=32$ (13.99) > $d_s=64$ (13.10$^*$). $d_s=128$이 명확히 최고이나 단조 패턴은 아니며, $^*$$d_s = 64$는 mb=4→8 mixed로 약간의 noise 포함.
 
 \textbf{Trade-off 정리}: 369M에서 SISA는 \textit{검색(NIAH 100\%)과 인프라 호환성}에서 우위, Mamba-3는 \textit{long-tail context tracking (LAMBADA)}에서 우위. 두 architecture는 서로 다른 강점을 가진 architectural choice이다.
 
@@ -850,9 +850,9 @@ $d_s$ & step1k & step2k & step3k & step5k & step1k & step2k & step3k \\
 
 주요 결과:
 \begin{enumerate}[leftmargin=*]
-\item \textbf{Transformer 대비 모든 규모 우위}: 152M LAMBADA +24\%, 50M +1.0\%p, 369M에서도 동등 수준. 모든 규모에서 Transformer 명확히 능가.
+\item \textbf{Transformer 대비 우위 또는 동등}: 152M LAMBADA +24\%, 50M +1.0\%p, 369M에서는 paper $d_s=32$ 변형이 동등 수준 (15.4 = 15.4). 50M/152M에서 Transformer 명확히 능가.
 \item \textbf{검색 능력 보존}: NIAH 100\%, 학습 10\%(step 1,000)에 도달. Mamba-3는 학습 후반(step 8K)에야 99\%에 도달. \textit{Attention 기반 검색을 SSM 위에 올린 SISA의 핵심 강점}.
-\item \textbf{152M에서 SOTA SSM (Mamba-3) 능가}: LAMBADA +1.8\%p, NIAH +1.0\%p, HellaSwag +0.9\%p, WinoG에서도 우위 (4 metric 우세).
+\item \textbf{152M에서 SOTA SSM (Mamba-3) 능가}: LAMBADA +1.8\%p, NIAH +1.0\%p, HellaSwag +0.9\%p (3 metric 우세). WinoG는 Mamba-3 52.7 > SISA 52.5로 박빙.
 \item \textbf{인프라 호환성}: SDPA 한 번으로 계산. FlashAttention 호환. Mamba-3 대비 +25\% 처리량 (152M).
 \item \textbf{369M에서의 trade-off}: Mamba-3가 LAMBADA 우위 (17.1 vs 14.8). SISA는 NIAH (100\% vs 86\%)와 처리량에서 우위. SISA와 Mamba-3는 \textit{서로 다른 강점}을 가진 architectural choice.
 \item \textbf{$d_s$ ablation}: 4개 $d_s$ 값 × 3 규모 = 12 데이터 포인트로 SSM 채널 크기와 FFN 축소율의 trade-off 정량화.
@@ -867,7 +867,7 @@ Score 수준 융합은 블록/헤드 수준과 구별되는 새로운 설계 축
 
 \item \textbf{학습 데이터.} SlimPajama-6B에서 5B 토큰만 사용하였다. 동일 규모의 다른 연구(Mamba: 300B 토큰)와 비교하면 학습 데이터가 제한적이다. 다만 모든 모델이 동일한 데이터로 학습하였으므로 아키텍처 간 상대 비교의 타당성은 유지된다.
 
-\item \textbf{152M d_s ablation 진행 중.} 152M 규모에서 $d_s \in \{16, 64\}$의 완전 학습(step 9,536)이 보고 시점 기준 진행 중이다. 중간 시점(step 4,000) 결과는 $d_s = 16$이 LAMBADA 15.8\%로 paper $d_s = 32$의 step 4,000 결과(14.8\%)보다 약간 우수하며, 이는 152M에서도 $d_s = 16$이 수렴 속도 우위를 가짐을 시사한다. 최종 step 9,536 결과는 논문의 최종본에 반영할 예정이다.
+\item \textbf{369M Chinchilla undertrained.} 369M 규모는 13.5$\times$ tokens/param으로 Chinchilla 최적(20$\times$) 미만 학습되었다. 더 많은 토큰으로 학습 시 SISA와 Mamba-3의 trade-off 양상이 달라질 가능성이 있다.
 
 \item \textbf{Softmax 병목.} Softmax 정규화가 SSM bias의 영향력을 제한한다. Sigmoid attention 기반 SISA는 향후 연구로 남긴다.
 
@@ -1031,9 +1031,9 @@ Mamba-3 & 98.5\% & $\pm$ 0.6\% \\
 \midrule
 \multirow{4}{*}{최종}
 & Transformer & 13.9 & 100.0 & 25.4 & 33.3 & 51.2 \\
-& \textbf{SISA} & \textbf{17.7} & \textbf{100.0} & 26.6 & 35.4 & \textbf{52.2} \\
-& Mamba-2 & 12.7 & 82.5 & 26.5 & 36.4 & 51.4 \\
-& Mamba-3 & 17.4 & 95.5 & \textbf{26.9} & \textbf{37.0} & 51.7 \\
+& \textbf{SISA} & \textbf{17.7} & \textbf{100.0} & 26.6 & 35.4 & \underline{52.2} \\
+& Mamba-2 & 12.7 & 82.5 & 26.5 & \textbf{36.4} & 51.4 \\
+& Mamba-3 & 15.5 & 99.0 & 26.0 & 34.9 & \textbf{52.7} \\
 \bottomrule
 \end{tabular}
 \end{table}
