@@ -38,7 +38,7 @@ Transformer의 attention은 모든 토큰 사이의 관계를 계산하지만, �
 \]
 이 가산적 구조는 증강된 query/key 벡터의 내적으로 정확히 분해되어, 표준 SDPA 한 번으로 계산된다. 별도의 SSM 모듈이나 커스텀 커널 없이, 유사도와 중요도를 하나의 연산에서 동시에 반영한다.
 
-세 가지 규모(50M, 152M, 369M)에서 Transformer, Mamba-2, Mamba-3와 비교한 결과, SISA는 두 패러다임의 장점을 결합한다: (1) \textbf{Transformer 대비 50M/152M에서 우위} (152M LAMBADA 17.3\% vs 13.9\%, 상대 +24\%), 369M에서는 SISA paper $d_s=32$가 동등 (15.4 = 15.4); (2) \textbf{Transformer-수준 검색 능력} (NIAH 100\%, 학습 10\% 시점부터; Mamba-3는 152M에서 step 8K에 99\% 안정, 369M paper에서 100\%), (3) \textbf{단일 SDPA 호출}로 FlashAttention 등 기존 커널과 완전 호환 (Mamba-3 대비 +25\% 처리량). Mamba-3와 비교하면, SISA는 \textit{검색 (NIAH)과 인프라 호환성에서 우위}를 보이며, \textit{long-tail context tracking (369M LAMBADA)에서는 Mamba-3의 full SSM 재귀가 약간 우세}하다. SISA는 단순한 architectural 승자가 아닌, ``Transformer의 검색 능력 + SSM의 중요도 신호''를 단일 attention 연산에 통합한 새로운 \textbf{score-level fusion} 패러다임으로 자리잡는다.
+세 가지 규모(50M, 152M, 369M)에서 Transformer, Mamba-2, Mamba-3와 비교한 결과 (mb=4 fair comparison), SISA는 두 패러다임의 장점을 결합한다: (1) \textbf{Transformer 대비 50M/152M에서 우위} (152M LAMBADA 17.3\% vs 13.9\%, 상대 +24\%), 369M에서는 SISA $d_s=32$가 동등 (15.4 = 15.4); (2) \textbf{Transformer-수준 검색 능력} (NIAH 100\%, 학습 10\% 시점부터; Mamba-3는 152M 99\%, 369M 86.5\%로 NIAH 한계), (3) \textbf{단일 SDPA 호출}로 FlashAttention 등 기존 커널과 완전 호환 (Mamba-3 대비 +25\% 처리량). Mamba-3와 비교하면, SISA는 \textit{검색 (NIAH)과 인프라 호환성에서 우위}를 보이며, \textit{long-tail context tracking (369M LAMBADA)에서는 Mamba-3의 full SSM 재귀가 약간 우세}하다. SISA는 단순한 architectural 승자가 아닌, ``Transformer의 검색 능력 + SSM의 중요도 신호''를 단일 attention 연산에 통합한 새로운 \textbf{score-level fusion} 패러다임으로 자리잡는다.
 \end{abstract}
 
 % ============================================================
@@ -86,7 +86,7 @@ Transformer~\citep{vaswani2017attention}의 self-attention은 시퀀스 내 모�
 \item SSM 신호를 attention score 내에 직접 통합하는 \textbf{score 수준 융합 (score-level fusion)}을 제안한다. 48개의 기존 SSM-Transformer 하이브리드를 조사한 결과, 이 수준에서의 융합은 본 연구가 최초이다.
 \item 증강 Q/K 구성을 통해 가산적 SSM bias를 \textbf{단일 SDPA 호출}로 구현하며, FlashAttention 등 기존 커널과 호환된다 (Mamba 계열의 커스텀 CUDA 커널 의존성 제거).
 \item \textbf{Transformer 대비 우위}: 152M LAMBADA +3.4\%p (상대 +24\%), 50M +1.0\%p. 369M에서는 SISA $d_s=32$ paper 변형이 Transformer와 동등 (15.4 = 15.4). 학습 10\% 시점에 이미 NIAH 100\% 달성으로 검색 능력 보존.
-\item \textbf{Mamba-3와의 명확한 trade-off 분석}: SISA는 (a) NIAH (정보 검색)에서 100\% 빠른 수렴 — Mamba-3는 152M에서 step 8K에 99\%, 369M paper에서 100\%까지 상승; (b) FlashAttention 호환과 +25\% 처리량 우위; (c) 152M에서 LAMBADA Mamba-3 능가 (17.3 vs 15.5). 반면 369M LAMBADA에서는 Mamba-3의 full SSM이 우수 (17.1 vs 14.8). 이는 architecture-별 강점의 명확한 분리를 보여준다.
+\item \textbf{Mamba-3와의 명확한 trade-off 분석}: SISA는 (a) NIAH (정보 검색)에서 100\% 빠른 수렴 — Mamba-3는 152M에서 step 8K에 99\%, 369M에서 mb=4 retrain 86.5\%; (b) FlashAttention 호환과 +25\% 처리량 우위; (c) 152M에서 LAMBADA Mamba-3 능가 (17.3 vs 15.5, 둘 다 mb=4 retrain). 반면 369M LAMBADA에서는 Mamba-3의 full SSM이 우수 (mb=4 retrain 17.4 vs 14.8). 이는 architecture-별 강점의 명확한 분리를 보여준다.
 \item \textbf{$d_s$ scaling 분석}: $d_s \in \{16, 32, 64, 128\}$ 체계적 ablation을 세 가지 규모에서 수행, FFN 축소율과 SSM 채널 크기의 trade-off를 정량화. Scale-adaptive $d_s$ 선택 가이드 제시.
 \end{enumerate}
 
@@ -506,7 +506,7 @@ SISA는 Step 2000(21\%)에서 13.9\%를 기록하며, 이는 Transformer 최종(
 
 \paragraph{152M (33 tok/param).} SISA $d_s = 16$이 LAMBADA 17.3\%로 \textit{모든 비교 모델 중 1위}. Transformer(+3.4\%p), Mamba-3(+1.8\%p), Mamba-2(+4.6\%p) 모두 능가. NIAH 100\%와 HellaSwag 26.9도 1위를 기록하여 SSM 계열의 강자 Mamba-3를 3개 벤치마크에서 능가하며, WinoGrande는 Mamba-3 (52.7) 대비 박빙 (52.5).
 
-\paragraph{369M (13.5 tok/param, undertrained).} 가장 큰 규모에서 모든 모델이 Chinchilla optimal (20$\times$) 미만의 13.5$\times$로 학습되어 architecture 차이가 일부 흐려진다. 본 연구는 $d_s$를 128로 확장 (SSM 비중 34\%, FFN 24\%)한 retrain을 수행, step 9,000에 LAMBADA 14.8\% 도달. \textbf{Mamba-3 (17.1\%)는 369M LAMBADA에서 우위}를 유지하며, 이는 full SSM 재귀 구조가 long-tail context tracking에서 더 sample-efficient함을 시사한다. 그러나 SISA는 (1) NIAH 100\% 빠른 수렴 (Mamba-3 paper 100\%, mb=4 retrain은 86.5\%로 저하), (2) FlashAttention 호환과 +25\% 처리량 우위, (3) paper $d_s=32$ 변형이 Transformer (15.4)와 LAMBADA 동등 (15.4 = 15.4)을 보여, \textit{검색 중심 또는 인프라 호환이 중요한 시나리오에서 명확한 우위}를 가진다. SISA와 Mamba-3는 \textbf{서로 다른 강점을 가진 trade-off architectural choice}로 자리잡는다.
+\paragraph{369M (13.5 tok/param, undertrained).} 가장 큰 규모에서 모든 모델이 Chinchilla optimal (20$\times$) 미만의 13.5$\times$로 학습되어 architecture 차이가 일부 흐려진다. 본 연구는 $d_s$를 128로 확장 (SSM 비중 34\%, FFN 24\%)한 retrain을 수행, step 9,000에 LAMBADA 14.8\% 도달. \textbf{Mamba-3 (mb=4 retrain 17.4\%, paper mb=2 17.1\%)는 369M LAMBADA에서 SISA 대비 +2.5\%p 우위}를 유지하며, 이는 full SSM 재귀 구조가 long-tail context tracking에서 더 sample-efficient함을 시사한다. 그러나 SISA는 (1) NIAH 100\% 빠른 수렴 (Mamba-3 paper 100\%, mb=4 retrain은 86.5\%로 저하), (2) FlashAttention 호환과 +25\% 처리량 우위, (3) SISA $d_s=32$ 변형이 Transformer (mb=4 retrain 15.4)와 LAMBADA 동등 (15.4 = 15.4)을 보여, \textit{검색 중심 또는 인프라 호환이 중요한 시나리오에서 명확한 우위}를 가진다. SISA와 Mamba-3는 \textbf{서로 다른 강점을 가진 trade-off architectural choice}로 자리잡는다.
 
 \figplace{
 \textbf{Figure 6: Scaling Behavior — Architecture Comparison Across Scales.}
@@ -855,7 +855,7 @@ $d_s$ & step1k & step2k & step3k & step5k & step1k & step2k & step3k \\
 \item \textbf{검색 능력 보존}: NIAH 100\%, 학습 10\%(step 1,000)에 도달. Mamba-3 (mb=4 retrain)는 학습 후반(step 8K)에야 99\%로 안정. \textit{Attention 기반 검색을 SSM 위에 올린 SISA의 핵심 강점}.
 \item \textbf{152M에서 SOTA SSM (Mamba-3) 능가}: LAMBADA +1.8\%p, NIAH +1.0\%p, HellaSwag +0.9\%p (3 metric 우세). WinoG는 Mamba-3 52.7 > SISA 52.5로 박빙.
 \item \textbf{인프라 호환성}: SDPA 한 번으로 계산. FlashAttention 호환. Mamba-3 대비 +25\% 처리량 (152M).
-\item \textbf{369M에서의 trade-off}: Mamba-3가 LAMBADA 우위 (17.1 vs 14.8). SISA는 NIAH (100\% vs 86\%)와 처리량에서 우위. SISA와 Mamba-3는 \textit{서로 다른 강점}을 가진 architectural choice.
+\item \textbf{369M에서의 trade-off}: Mamba-3가 LAMBADA 우위 (mb=4 retrain 17.4 vs SISA $d_s=128$ 14.8). SISA는 NIAH (100\% vs 86\%)와 처리량에서 우위. SISA와 Mamba-3는 \textit{서로 다른 강점}을 가진 architectural choice.
 \item \textbf{$d_s$ ablation}: 4개 $d_s$ 값 × 3 규모 = 12 데이터 포인트로 SSM 채널 크기와 FFN 축소율의 trade-off 정량화.
 \end{enumerate}
 
