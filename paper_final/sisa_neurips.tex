@@ -427,14 +427,14 @@ L=2048(학습 길이)에서 \textbf{SISA 91\% $>$ Transformer 82\%}이다. SSM b
 
 \begin{table}[h]
 \centering
-\caption{152M LAMBADA 정확도(\%) 추이. 본 연구 \textbf{mb=4 retrain} fair comparison 데이터. SISA는 Step 3000(31\%)에서 Transformer 최종(13.9\%)을 넘긴다.}
+\caption{152M LAMBADA 정확도(\%) 추이. 본 연구 \textbf{mb=4 retrain} fair comparison 데이터. SISA는 d_s=32 v2 ($\lambda$ fp32) trajectory; $^*$ SISA mb=4 retrain 학습이 step 7K까지 진행되어 ``최종'' 열도 step 7K 값. paper mb=2 v2 step 9,536 측정값 (17.7)은 Appendix~\ref{tab:bootstrap} 인접 v1/v2 표 참조. SISA는 Step 3000(31\%)에서 Transformer 최종(13.9\%)을 넘긴다.}
 \label{tab:efficiency}
 \begin{tabular}{lrrrrrr}
 \toprule
 & \textbf{1K} & \textbf{2K} & \textbf{3K} & \textbf{5K} & \textbf{7K} & \textbf{최종} \\
 \midrule
 Transformer & 3.5 & 5.9 & 6.2 & 7.2 & 13.9 & 13.9 \\
-\textbf{SISA} & \textbf{8.4} & \textbf{13.9} & \textbf{14.4} & \textbf{15.8} & \textbf{17.4} & \textbf{17.7} \\
+\textbf{SISA} & \textbf{8.4} & \textbf{13.9} & \textbf{14.4} & \textbf{15.8} & \textbf{17.4} & \textbf{17.4}$^*$ \\
 Mamba-2 & 1.0 & 6.9 & 10.2 & 12.1 & 12.4 & 12.7 \\
 Mamba-3 & 1.8 & 10.0 & 12.0 & 13.9 & 15.3 & 15.5 \\
 \bottomrule
@@ -597,7 +597,7 @@ SISA에는 Mamba와 같은 recurrent state가 없다. convolution도 없고, 순
 
 \begin{table}[h]
 \centering\small
-\caption{$\lambda$ fp32 수정 전후 비교 (152M, LAMBADA \%).}
+\caption{$\lambda$ fp32 수정 전후 비교 (152M, LAMBADA \%). v1, v2 mid-step (1K-5K)은 본 연구 mb=4 retrain. v2 최종 17.7은 paper mb=2 reference (본 연구 mb=4 v2 retrain은 step 7K=17.4까지 측정).}
 \begin{tabular}{lrrrrr}
 \toprule
 & \textbf{Step 1K} & \textbf{2K} & \textbf{3K} & \textbf{5K} & \textbf{최종} \\
@@ -1007,7 +1007,7 @@ Mamba-3 & 98.5\% & $\pm$ 0.6\% \\
 
 \begin{table}[h]
 \centering\small
-\caption{152M, Step 1K--최종 전체 결과(\%). 본 연구 \textbf{mb=4 retrain} fair comparison 데이터.}
+\caption{152M, Step 1K--최종 전체 결과(\%). 본 연구 \textbf{mb=4 retrain} fair comparison 데이터. $^*$ SISA d_s=32 v2 mb=4 학습이 step 7,000까지 진행되어 ``최종'' 행도 step 7K 값. paper mb=2 v2 step 9,536 = 17.7은 v1/v2 표 참조.}
 \begin{tabular}{clccccc}
 \toprule
 \textbf{Step} & \textbf{Model} & \textbf{LAMBADA} & \textbf{NIAH} & \textbf{HSwag} & \textbf{ARC-E} & \textbf{WinoG} \\
@@ -1032,7 +1032,7 @@ Mamba-3 & 98.5\% & $\pm$ 0.6\% \\
 \midrule
 \multirow{4}{*}{최종}
 & Transformer & 13.9 & 100.0 & 25.4 & 33.3 & 51.2 \\
-& \textbf{SISA} & \textbf{17.7} & \textbf{100.0} & 26.6 & 35.4 & \underline{52.2} \\
+& \textbf{SISA}$^*$ & \textbf{17.4} & \textbf{100.0} & 26.6 & 35.5 & 52.3 \\
 & Mamba-2 & 12.7 & 82.5 & 26.5 & \textbf{36.4} & 51.4 \\
 & Mamba-3 & 15.5 & 99.0 & 26.0 & 34.9 & \textbf{52.7} \\
 \bottomrule
@@ -1105,19 +1105,19 @@ $\lambda$ 학습의 효과는 LAMBADA에서 가장 뚜렷하다(+1.6\%p). NIAH�
 
 \begin{table}[h]
 \centering\small
-\caption{처리량 대비 성능 효율 (152M). \textit{LAMBADA/NIAH는 이전 paper (mb=2) 측정값; throughput은 동일 hardware에서 현재 측정.}}
+\caption{처리량 대비 성능 효율 (152M). 본 연구 \textbf{mb=4 retrain} fair comparison 데이터; throughput은 동일 hardware 측정. $^*$ SISA d_s=32 v2 mb=4 학습이 step 7,000까지 진행되어 LAMBADA 17.4는 step 7K 값.}
 \begin{tabular}{lrrrr}
 \toprule
 & \textbf{tok/s} & \textbf{LAMBADA} & \textbf{LAMBADA/1K tok/s} & \textbf{NIAH} \\
 \midrule
 Transformer & 27,714 & 13.9 & 0.50 & 100.0 \\
-\textbf{SISA} & 16,783 & \textbf{17.7} & \textbf{1.06} & \textbf{100.0} \\
+\textbf{SISA}$^*$ & 16,783 & \textbf{17.4} & \textbf{1.04} & \textbf{100.0} \\
 Mamba-2 & 10,719 & 12.7 & 1.18 & 82.5 \\
-Mamba-3 & 13,460 & 17.4 & 1.29 & 95.5 \\
+Mamba-3 & 13,460 & 15.5 & 1.15 & 99.0 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-LAMBADA/1K tok/s 지표에서 SISA(1.06)는 Transformer(0.50)의 \textbf{2.1배} 효율적이다. Mamba 계열이 더 높은 효율을 보이나, NIAH에서의 한계(82.5\%, 95.5\%)를 고려하면 SISA가 ``검색 능력을 유지하면서 달성 가능한 최고 효율''을 제공한다.
+LAMBADA/1K tok/s 지표에서 SISA(1.04)는 Transformer(0.50)의 \textbf{2.1배} 효율적이다. Mamba-2(1.18)와 Mamba-3(1.15)도 SISA보다 약간 높은 효율을 보이나, Mamba-2는 NIAH에서 큰 한계(82.5\%)를 보이며 Mamba-3도 100\%에 못 미친다(99.0\%). SISA는 ``검색 능력을 완전히 유지하면서 달성 가능한 최고 효율''을 제공한다.
 
 \end{document}
