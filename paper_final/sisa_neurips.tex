@@ -345,7 +345,7 @@ SISA $d_s = 128$ & 16.8 & \textbf{100.0} & 26.0 & 35.0 & 51.9 \\
 \item \textbf{vs Mamba-2 (LAMBADA 12.7)}: +4.6\%p (상대 +36.4\%)
 \end{itemize}
 
-\textbf{NIAH 수렴 속도}: SISA는 학습 10\%(step 1,000) 시점에 이미 100\% 달성. Mamba-3는 step 6,000에야 100\%에 근접 — \textit{Transformer attention 기반 검색 능력의 보존}.
+\textbf{NIAH 수렴 속도}: SISA는 학습 10\%(step 1,000) 시점에 이미 100\% 달성. Mamba-3는 step 3,000에 96.5\%까지 빠르게 상승하나 5K에서 86.0\%로 진동하며 step 8K에 99.0\%로 안정 — \textit{Transformer attention 기반 검색 능력의 보존이 SISA의 일관성 우위}.
 
 \textbf{Trade-off}: ARC-Easy에서 Mamba-2 (36.4\%)와 paper $d_s = 32$ (35.8\%)가 SISA $d_s=16$ (34.7\%) 대비 약간 우세. 이는 ARC-Easy의 사실 관계 추론이 SSM의 누적 패턴 추출을 선호함을 시사하나 (Section~\ref{sec:bench_analysis}), SISA도 Transformer (33.3\%)는 +1.4\%p 능가한다.
 
@@ -364,7 +364,7 @@ SISA $d_s = 128$ & 16.8 & \textbf{100.0} & 26.0 & 35.0 & 51.9 \\
 Transformer & 61.5 & 78.0 & 93.5 & 98.5 & 100.0 & 100.0 \\
 \textbf{SISA} & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} \\
 Mamba-2 & 0.0 & 6.5 & 42.0 & 71.0 & 78.5 & 82.5 \\
-Mamba-3 & 0.0 & 72.0 & 75.5 & 68.0 & 93.5 & 95.5 \\
+Mamba-3 & 0.0 & 61.0 & 96.5 & 86.0 & 97.5 & 99.0 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -453,9 +453,9 @@ SISA는 Step 2000(21\%)에서 13.9\%를 기록하며, 이는 Transformer 최종(
   \item Step: 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000
   \item \textbf{SISA d_s=16 (ours)} (파란 실선, 두께 2.5pt, marker='o'): [6.79, 13.64, 13.74, 15.82, 15.70, 16.42, 16.67, 17.19, 17.29]
   \item SISA d_s=32 (paper) (파란 점선, 두께 1.5pt, marker='x'): [4.81, 11.14, 13.10, 14.79, 15.39, 16.22, 16.32, 16.17, 16.13]
-  \item Mamba-3 (주황 점선, 두께 2pt, marker='^'): [3.47, 5.88, 6.21, 6.04, 7.22, 13.08, 13.86, 13.84, 15.51]
+  \item Mamba-3 (주황 점선, 두께 2pt, marker='^'): [1.82, 10.05, 12.03, 12.13, 13.91, 14.71, 15.31, 15.33, 15.45]
   \item Transformer (초록 파선, 두께 2pt, marker='s'): [3.47, 5.88, 6.21, 6.04, 7.22, 13.08, 13.86, 13.84, 13.88]
-  \item Mamba-2 (빨강 점쇄선, 두께 2pt, marker='v'): [1.0, 6.9, 10.2, 11.0, 12.1, 12.4, 12.4, 12.5, 12.67]
+  \item Mamba-2 (빨강 점쇄선, 두께 2pt, marker='v'): [0.99, 6.89, 10.23, 11.0, 12.05, 12.4, 12.42, 12.5, 12.67]
 \end{itemize}
 
 \textit{축}: X = ``Training Step'' (0--9536), Y = ``LAMBADA Accuracy (\%)'' (0--20).
@@ -469,14 +469,12 @@ SISA는 Step 2000(21\%)에서 13.9\%를 기록하며, 이는 Transformer 최종(
 
 \textit{핵심 메시지}: SISA가 모든 시점에서 Transformer 능가, Mamba-3는 후반에 SISA에 근접하나 도달 못 함.
 }
-Step 2000에 수직 점선 + SISA 값(13.9\%)에서 수평 점선이 Transformer 최종선(13.9\%)과 만나는 것을 표시. 주석: ``SISA at 21\% training = Transformer at 100\%''.
-}
 
 \subsection{스케일링: 세 가지 규모}
 
 \begin{table}[h]
 \centering\small
-\caption{세 가지 규모에서의 최종 결과(\%). SISA의 $d_s$ 값은 본 연구의 ablation에서 도출된 \textit{스케일별 최적값} ($d_s^{\text{opt}} \approx 0.125 \cdot d_{\text{model}}$). 모든 모델은 동일한 5B 토큰으로 학습.}
+\caption{세 가지 규모에서의 최종 결과(\%). SISA의 $d_s$ 값은 본 연구의 ablation에서 도출된 \textit{스케일별 최적값}이며, 비단조적 패턴(50M: $d_s=64$, 152M: $d_s=16$, 369M: $d_s=128$)을 보인다. 모든 모델은 동일한 5B 토큰으로 학습.}
 \label{tab:scaling}
 \begin{tabular}{clccccc}
 \toprule
@@ -616,7 +614,7 @@ Step 1000에서 +74\%의 차이가 발생한다. 주목할 점은 v1($\lambda$ �
 
 SISA가 전 벤치마크 1위가 아닌 점에 주목한다.
 
-\paragraph{ARC-Easy에서 Mamba-3 우위 (37.0\% vs SISA 35.4\%).} ARC-Easy는 사실 관계(``식물이 자라려면 무엇이 필요한가?'')를 묻는다. SSM의 선형 재귀 $\mathbf{h}_t = \alpha_t \mathbf{h}_{t-1} + \mathbf{B}_t \mathbf{x}_t$는 학습 데이터에서 반복 출현하는 분포적 패턴을 상태에 효율적으로 축적한다. 완전한 재귀 구조인 Mamba-3가 이 축적에서 가장 효과적이고, SISA는 attention 내부의 가산적 bias를 통해 부분적으로만 이 효과를 획득한다. 그럼에도 SISA(35.4\%)는 Transformer(33.3\%)를 +2.1\%p 상회하여, SSM bias가 지식 과제에서도 기여함을 보여준다.
+\paragraph{ARC-Easy에서 Mamba-2 우위 (36.4\% vs SISA $d_s=16$ 34.7\%).} ARC-Easy는 사실 관계(``식물이 자라려면 무엇이 필요한가?'')를 묻는다. SSM의 선형 재귀 $\mathbf{h}_t = \alpha_t \mathbf{h}_{t-1} + \mathbf{B}_t \mathbf{x}_t$는 학습 데이터에서 반복 출현하는 분포적 패턴을 상태에 효율적으로 축적한다. 완전한 재귀 구조인 Mamba 계열이 이 축적에서 가장 효과적이고, SISA는 attention 내부의 가산적 bias를 통해 부분적으로만 이 효과를 획득한다. 그럼에도 SISA(34.7\%)는 Transformer(33.3\%)를 +1.4\%p 상회하며, paper $d_s=32$ 변형(35.8\%)은 Mamba-3(34.9\%)도 능가하여, SSM bias가 지식 과제에서도 기여함을 보여준다.
 
 \paragraph{HellaSwag에서의 근소한 차이.} 모든 모델이 25--27\% 범위에 분포하며, 152M 규모에서는 상식 추론 능력의 차별화가 제한적이다. 이 벤치마크의 랜덤 기준이 25\%이므로, 현재 수치는 랜덤 대비 1--2\%p의 미미한 차이에 해당한다. 규모 확장 시 더 명확한 차이가 기대된다.
 
@@ -638,7 +636,7 @@ content similarity ($\mathbf{q}^\top \mathbf{k} / \sqrt{d_h}$)가 이미 강한 
 
 \begin{table}[h]
 \centering
-\caption{369M SISA vs Transformer: Bootstrap 95\% 신뢰구간. 모든 벤치마크에서 신뢰구간이 겹친다.}
+\caption{369M SISA vs Transformer: Bootstrap 95\% 신뢰구간. LAMBADA는 perplexity-rank 기반 정확도(타깃 토큰의 negative log-likelihood가 후보 단어 중 최저인지)이며, Table~\ref{tab:scaling}의 greedy 정확도(15.4\%/14.8\%)와 다른 메트릭이다. 모든 벤치마크에서 신뢰구간이 겹친다.}
 \label{tab:bootstrap}
 \begin{tabular}{lccl}
 \toprule
@@ -841,7 +839,7 @@ $d_s$ & step1k & step2k & step3k & step5k & step1k & step2k & step3k \\
 \item \textbf{369M ($d = 1024$)}: $d_s = 128$이 우리 retrain 내에서 LAMBADA 14.83으로 최고. paper $d_s = 32$ 원본 (15.40)와 근접.
 \end{itemize}
 
-\textbf{핵심 통찰}: 단일 ``최적 $d_s$''는 존재하지 않으며 \textit{모델 규모와 태스크 특성에 따라 달라진다}. 작은 모델 (50M)에서는 큰 $d_s$ ($d_s/d = 12.5\%$)가 SSM 용량을 충분히 활용, 중간/큰 모델 (152M+)에서는 작은 $d_s$ ($d_s/d \approx 2\%$)가 FFN 보존으로 인해 검색 태스크에 유리. ARC-E (지식)와 LAMBADA (장거리 문맥)는 서로 다른 $d_s$ 선호도를 보인다.
+\textbf{핵심 통찰}: 단일 ``최적 $d_s$''는 존재하지 않으며 \textit{모델 규모와 태스크 특성에 따라 비단조적으로 달라진다}. 50M $d_s=64$ ($d_s/d \approx 12.5\%$), 152M $d_s=16$ ($d_s/d \approx 2\%$), 369M $d_s=128$ ($d_s/d \approx 12.5\%$)로, 양 극단(50M, 369M)은 큰 $d_s$를, 중간(152M)은 작은 $d_s$를 선호하는 \textbf{U자형 패턴}이다. 단순한 $d_s = c \cdot d_{\text{model}}$ scaling rule은 데이터에 부합하지 않으며, FFN 축소율과 SSM 용량 이득의 trade-off가 regime별로 다르게 작동한다. ARC-E (지식)와 LAMBADA (장거리 문맥)는 서로 다른 $d_s$ 선호도를 보인다.
 
 % ============================================================
 % 8. 결론
@@ -853,7 +851,7 @@ $d_s$ & step1k & step2k & step3k & step5k & step1k & step2k & step3k \\
 주요 결과:
 \begin{enumerate}[leftmargin=*]
 \item \textbf{Transformer 대비 모든 규모 우위}: 152M LAMBADA +24\%, 50M +1.0\%p, 369M에서도 동등 수준. 모든 규모에서 Transformer 명확히 능가.
-\item \textbf{검색 능력 보존}: NIAH 100\%, 학습 10\%(step 1,000)에 도달. Mamba-3는 step 6,000+에야 100\%. \textit{Attention 기반 검색을 SSM 위에 올린 SISA의 핵심 강점}.
+\item \textbf{검색 능력 보존}: NIAH 100\%, 학습 10\%(step 1,000)에 도달. Mamba-3는 학습 후반(step 8K)에야 99\%에 도달. \textit{Attention 기반 검색을 SSM 위에 올린 SISA의 핵심 강점}.
 \item \textbf{152M에서 SOTA SSM (Mamba-3) 능가}: LAMBADA +1.8\%p, NIAH +1.0\%p, HellaSwag +0.9\%p, WinoG에서도 우위 (4 metric 우세).
 \item \textbf{인프라 호환성}: SDPA 한 번으로 계산. FlashAttention 호환. Mamba-3 대비 +25\% 처리량 (152M).
 \item \textbf{369M에서의 trade-off}: Mamba-3가 LAMBADA 우위 (17.1 vs 14.8). SISA는 NIAH (100\% vs 86\%)와 처리량에서 우위. SISA와 Mamba-3는 \textit{서로 다른 강점}을 가진 architectural choice.
