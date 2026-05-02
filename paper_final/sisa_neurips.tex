@@ -716,7 +716,7 @@ SSM 채널 차원 $d_s \in \{16, 32, 64, 128\}$에 대해 세 가지 모델 규�
 \textit{데이터}:
 \begin{itemize}
   \item \textbf{50M}: SISA $d_s$ = [14.34, 12.75, 14.40, 13.16], Transformer baseline=13.43 (회색 점선), Mamba-3 baseline=12.75 (주황 점선)
-  \item \textbf{152M}: SISA $d_s$ = [17.29, 16.13, 16.79, 16.79], Transformer=13.88, Mamba-3=15.51
+  \item \textbf{152M}: SISA $d_s$ = [17.29, 16.13, 16.73, 16.79], Transformer=13.88, Mamba-3=15.51
   \item \textbf{369M}: SISA $d_s$ = [---, 13.99, 13.10, 14.83] (16은 step 3000만), Transformer=15.40, Mamba-3=17.10 (paper) and 17.35 (mb=4 retrain)
 \end{itemize}
 
@@ -821,7 +821,7 @@ $d_s$ & step1k & step2k & step3k & step5k & step1k & step2k & step3k \\
 16 & \textbf{100.0} & 100.0 & 100.0 & 100.0 & 0.0 & 75.5 & 99.5 \\
 32 (paper) & 73.5 & 100.0 & 100.0 & 100.0 & 0.0 & 56.5 & 84.0 \\
 64 & 9.0 & 100.0 & 100.0 & 100.0 & 0.0 & --- & 100.0 \\
-128 & --- & --- & --- & --- & 0.0 & 46.5 & \textbf{100.0} \\
+128 & 3.0 & 100.0 & 100.0 & 100.0 & 0.0 & 46.5 & \textbf{100.0} \\
 \bottomrule
 \end{tabular}
 \end{table}
