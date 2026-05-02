@@ -427,7 +427,7 @@ L=2048(학습 길이)에서 \textbf{SISA 91\% $>$ Transformer 82\%}이다. SSM b
 
 \begin{table}[h]
 \centering
-\caption{152M LAMBADA 정확도(\%) 추이. 본 연구 \textbf{mb=4 retrain} fair comparison 데이터. SISA는 d_s=32 v2 ($\lambda$ fp32) trajectory; $^*$ SISA mb=4 retrain 학습이 step 7K까지 진행되어 ``최종'' 열도 step 7K 값. paper mb=2 v2 step 9,536 측정값 (17.7)은 Appendix~\ref{tab:bootstrap} 인접 v1/v2 표 참조. SISA는 Step 3000(31\%)에서 Transformer 최종(13.9\%)을 넘긴다.}
+\caption{152M LAMBADA 정확도(\%) 추이. 본 연구 \textbf{mb=4 retrain} fair comparison 데이터. SISA는 d_s=32 v2 ($\lambda$ fp32) trajectory; $^*$ SISA mb=4 retrain 학습이 step 7K까지 진행되어 ``최종'' 열도 step 7K 값. paper mb=2 v2 step 9,536 측정값 (17.7)은 Table~\ref{tab:v1v2_appendix} 참조. SISA는 Step 3000(31\%)에서 Transformer 최종(13.9\%)을 넘긴다.}
 \label{tab:efficiency}
 \begin{tabular}{lrrrrrr}
 \toprule
@@ -1007,7 +1007,7 @@ Mamba-3 & 98.5\% & $\pm$ 0.6\% \\
 
 \begin{table}[h]
 \centering\small
-\caption{152M, Step 1K--최종 전체 결과(\%). 본 연구 \textbf{mb=4 retrain} fair comparison 데이터. $^*$ SISA d_s=32 v2 mb=4 학습이 step 7,000까지 진행되어 ``최종'' 행도 step 7K 값. paper mb=2 v2 step 9,536 = 17.7은 v1/v2 표 참조.}
+\caption{152M, Step 1K--최종 전체 결과(\%). 본 연구 \textbf{mb=4 retrain} fair comparison 데이터. $^*$ SISA d_s=32 v2 mb=4 학습이 step 7,000까지 진행되어 ``최종'' 행도 step 7K 값. paper mb=2 v2 step 9,536 = 17.7은 Table~\ref{tab:v1v2_appendix} 참조.}
 \begin{tabular}{clccccc}
 \toprule
 \textbf{Step} & \textbf{Model} & \textbf{LAMBADA} & \textbf{NIAH} & \textbf{HSwag} & \textbf{ARC-E} & \textbf{WinoG} \\
@@ -1087,6 +1087,7 @@ SISA의 FLOPs 오버헤드는 7\%로, 증강 차원에 의한 SDPA 연산 증가
 \begin{table}[h]
 \centering\small
 \caption{SISA v1 ($\lambda$ 고정) vs v2 ($\lambda$ 학습) 최종 결과 비교 (152M). \textit{이전 paper (mb=2) 측정값. lambda fp32 학습 효과를 mb=2 setup 하에서 분석.}}
+\label{tab:v1v2_appendix}
 \begin{tabular}{lccccc}
 \toprule
 & \textbf{LAMBADA} & \textbf{NIAH} & \textbf{HellaSwag} & \textbf{ARC-E} & \textbf{WinoG} \\
