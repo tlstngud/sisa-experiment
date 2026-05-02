@@ -163,7 +163,7 @@ Mamba-3~\citep{mamba3}의 복소 SSM $\leftrightarrow$ 데이터 의존 RoPE 등
 \paragraph{투영.} $\mathbf{B}_t = \mathbf{W}_B \mathbf{x}_t$, $\mathbf{C}_t = \mathbf{W}_C \mathbf{x}_t \in \mathbb{R}^{d_s}$. 여기서 $\mathbf{W}_B, \mathbf{W}_C \in \mathbb{R}^{(h \cdot d_s) \times d}$이며, $h$는 헤드 수, $d_s$는 SSM 채널 차원이다.
 
 \paragraph{감쇠.} $\alpha_t = \exp(-\text{softplus}(\mathbf{w}_\alpha^\top \mathbf{x}_t + b_\alpha)) \in (0, 1)$.
-초기 $b_\alpha = -5$으로 반감기 약 100 토큰. $\mathbf{w}_\alpha \in \mathbb{R}^{h \times d}$로 헤드별 독립적 감쇠율을 학습한다.
+초기 $b_\alpha = -5$로 설정하여 반감기 약 100 토큰을 갖도록 하였다. $\mathbf{w}_\alpha \in \mathbb{R}^{h \times d}$로 헤드별 독립적 감쇠율을 학습한다.
 
 \paragraph{위상.} $\theta_t = \mathbf{W}_\theta \mathbf{x}_t \in \mathbb{R}^{d_s/2}$ (데이터 의존 회전 주파수). $\mathbf{W}_\theta \in \mathbb{R}^{(h \cdot d_s/2) \times d}$으로 헤드별·차원별 회전을 학습한다.
 
@@ -436,7 +436,7 @@ L=2048(학습 길이)에서 \textbf{SISA 91\% $>$ Transformer 82\%}이다. SSM b
 Transformer & 3.5 & 5.9 & 6.2 & 7.2 & 13.9 & 13.9 \\
 \textbf{SISA} & \textbf{8.4} & \textbf{13.9} & \textbf{14.4} & \textbf{15.8} & \textbf{17.4} & \textbf{17.7} \\
 Mamba-2 & 1.0 & 6.9 & 10.2 & 12.1 & 12.4 & 12.7 \\
-Mamba-3 & 4.7 & 11.7 & 14.6 & 16.2 & 17.4 & 17.4 \\
+Mamba-3 & 1.8 & 10.0 & 12.0 & 13.9 & 15.3 & 15.5 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -878,7 +878,7 @@ Score 수준 융합은 블록/헤드 수준과 구별되는 새로운 설계 축
 
 \paragraph{향후 연구.}
 \begin{enumerate}[leftmargin=*]
-\item \textbf{$d_s$ 극단값 탐색.} $d_s \in \{96, 128\}$에서의 성능 검증. $d_s = 128$은 369M에서 FFN 58\% 축소라는 극단적 tradeoff(SSM 34.2\% vs FFN 24.6\%)를 수반하나, $d_s = 64$의 후기 성능 peak 경향이 단조 증가인지 vs 최적점이 있는지 확정 가능.
+\item \textbf{$d_s$ 중간값 탐색.} 본 연구는 $d_s \in \{16, 32, 64, 128\}$ 4개 값에서 비단조적 U자 패턴을 확인하였다. $d_s = 96$ 등 중간값에서의 성능 검증으로 152M의 valley(현재 $d_s=16$) 또는 369M의 우상향 경계(현재 $d_s=128$)의 정확한 위치를 미세화 가능.
 \item \textbf{Scale-adaptive $d_s$ 학습화.} 현재 수동 선택인 $d_s$를 학습 과정에서 자동 조정하는 메커니즘(e.g., 레이어별 $d_s$ 혹은 sparse SSM 채널).
 \item Sigmoid SISA로 softmax 병목 해소.
 \item 1B+ 규모 검증 및 $d_s$ 스케일링 법칙 도출.
