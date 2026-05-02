@@ -506,7 +506,7 @@ SISA는 Step 2000(21\%)에서 13.9\%를 기록하며, 이는 Transformer 최종(
 
 \paragraph{152M (33 tok/param).} SISA $d_s = 16$이 LAMBADA 17.3\%로 \textit{모든 비교 모델 중 1위}. Transformer(+3.4\%p), Mamba-3(+1.8\%p), Mamba-2(+4.6\%p) 모두 능가. NIAH 100\%와 HellaSwag 26.9도 1위를 기록하여 SSM 계열의 강자 Mamba-3를 3개 벤치마크에서 능가하며, WinoGrande는 Mamba-3 (52.7) 대비 박빙 (52.5).
 
-\paragraph{369M (13.5 tok/param, undertrained).} 가장 큰 규모에서 모든 모델이 Chinchilla optimal (20$\times$) 미만의 13.5$\times$로 학습되어 architecture 차이가 일부 흐려진다. 본 연구는 $d_s$를 128로 확장 (SSM 비중 34\%, FFN 24\%)한 retrain을 수행, step 9,000에 LAMBADA 14.8\% 도달. \textbf{Mamba-3 (mb=4 retrain 17.4\%, paper mb=2 17.1\%)는 369M LAMBADA에서 SISA 대비 +2.5\%p 우위}를 유지하며, 이는 full SSM 재귀 구조가 long-tail context tracking에서 더 sample-efficient함을 시사한다. 그러나 SISA는 (1) NIAH 100\% 빠른 수렴 (Mamba-3 paper 100\%, mb=4 retrain은 86.5\%로 저하), (2) FlashAttention 호환과 +25\% 처리량 우위, (3) SISA $d_s=32$ 변형이 Transformer (mb=4 retrain 15.4)와 LAMBADA 동등 (15.4 = 15.4)을 보여, \textit{검색 중심 또는 인프라 호환이 중요한 시나리오에서 명확한 우위}를 가진다. SISA와 Mamba-3는 \textbf{서로 다른 강점을 가진 trade-off architectural choice}로 자리잡는다.
+\paragraph{369M (13.5 tok/param, undertrained).} 가장 큰 규모에서 모든 모델이 Chinchilla optimal (20$\times$) 미만의 13.5$\times$로 학습되어 architecture 차이가 일부 흐려진다. 본 연구는 $d_s$를 128로 확장 (SSM 비중 34\%, FFN 24\%)한 retrain을 수행, step 9,000에 LAMBADA 14.8\% 도달. \textbf{Mamba-3 (mb=4 retrain 17.4\%, paper mb=2 17.1\%)는 369M LAMBADA에서 SISA $d_s=128$ (14.8) 대비 +2.6\%p 우위}를 유지하며, 이는 full SSM 재귀 구조가 long-tail context tracking에서 더 sample-efficient함을 시사한다. 그러나 SISA는 (1) NIAH 100\% 빠른 수렴 (Mamba-3 paper 100\%, mb=4 retrain은 86.5\%로 저하), (2) FlashAttention 호환과 +25\% 처리량 우위, (3) SISA $d_s=32$ 변형이 Transformer (mb=4 retrain 15.4)와 LAMBADA 동등 (15.4 = 15.4)을 보여, \textit{검색 중심 또는 인프라 호환이 중요한 시나리오에서 명확한 우위}를 가진다. SISA와 Mamba-3는 \textbf{서로 다른 강점을 가진 trade-off architectural choice}로 자리잡는다.
 
 \figplace{
 \textbf{Figure 6: Scaling Behavior — Architecture Comparison Across Scales.}
@@ -796,7 +796,7 @@ Mamba-3 (mb=4 retrain) & --- & --- & 9000 & \textbf{17.35} & 86.5 & 26.81 & 35.0
 \end{tabular}
 \end{table}
 
-\textbf{핵심 발견 1: Mamba-3가 369M LAMBADA에서 우위.} mb=4 fair comparison retrain에서 Mamba-3 (LAMBADA 17.35) > SISA $d_s = 128$ (14.83) by +2.52\%p. 이는 \textit{369M (Chinchilla undertrained, 13.5$\times$ tokens/param)에서 full SSM 재귀가 attention+SSM-bias 하이브리드보다 LAMBADA에서 sample-efficient}함을 시사한다.
+\textbf{핵심 발견 1: Mamba-3가 369M LAMBADA에서 우위.} mb=4 fair comparison retrain에서 Mamba-3 (LAMBADA 17.4) > SISA $d_s = 128$ (14.8) by +2.6\%p. 이는 \textit{369M (Chinchilla undertrained, 13.5$\times$ tokens/param)에서 full SSM 재귀가 attention+SSM-bias 하이브리드보다 LAMBADA에서 sample-efficient}함을 시사한다.
 
 \textbf{핵심 발견 2: SISA가 NIAH에서 압도적 우위.} 모든 SISA variants가 NIAH 100\%, Mamba-3 (mb=4 retrain)는 86.5\%에 정체. 이는 \textit{attention 기반 검색 능력의 보존}이 SISA의 핵심 강점임을 보여준다.
 
