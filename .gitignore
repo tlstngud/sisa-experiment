@@ -2,7 +2,11 @@ venv/
 __pycache__/
 *.pyc
 checkpoints/
+ckpts_3way/
+ckpts_ablation/
 data_cache/
 *.bin
+*.pt
 wandb/
 .torch/
+paper_final/sisa_neurips_git_backup.tex

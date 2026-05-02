@@ -14,8 +14,12 @@ from configs import get_phase_config
 from models import create_model
 
 
-def load_checkpoint(model_type: str, phase: int, ckpt_path: str, device: str = "cuda"):
+def load_checkpoint(model_type: str, phase: int, ckpt_path: str, device: str = "cuda", d_state=None, d_ff=None):
     config = get_phase_config(phase, model_type)
+    if d_state is not None:
+        config.d_state = d_state
+    if d_ff is not None:
+        config.d_ff_reduced = d_ff
     model = create_model(config)
 
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
@@ -142,6 +146,9 @@ def main():
     parser.add_argument("--ckpt", required=True, help="Checkpoint path")
     parser.add_argument("--phase", type=int, default=1)
     parser.add_argument("--tasks", nargs="+", default=["lambada_openai", "hellaswag", "piqa", "arc_easy", "winogrande"])
+    parser.add_argument("--d-state", type=int, default=None)
+    parser.add_argument("--d-ff", type=int, default=None)
+    parser.add_argument("--tag", type=str, default="", help="Tag for result label")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -150,7 +157,7 @@ def main():
     print(f"  Evaluation: {args.model} — Phase {args.phase}")
     print(f"{'='*60}")
 
-    model, config = load_checkpoint(args.model, args.phase, args.ckpt, device)
+    model, config = load_checkpoint(args.model, args.phase, args.ckpt, device, d_state=args.d_state, d_ff=args.d_ff)
     tokenizer = AutoTokenizer.from_pretrained(config.tokenizer_name)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token

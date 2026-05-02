@@ -18,6 +18,7 @@ from pathlib import Path
 
 import torch
 import torch.nn.functional as F
+torch.backends.cuda.enable_cudnn_sdp(False)
 
 import wandb
 
@@ -45,6 +46,9 @@ def parse_args():
     parser.add_argument("--grad-accum", type=int, default=None)
     parser.add_argument("--lr", type=float, default=None)
     parser.add_argument("--max-tokens", type=int, default=None)
+    parser.add_argument("--d-state", type=int, default=None)
+    parser.add_argument("--d-ff", type=int, default=None)
+    parser.add_argument("--output-dir", type=str, default=None)
     return parser.parse_args()
 
 
@@ -164,6 +168,12 @@ def main():
         config.lr = args.lr
     if args.max_tokens is not None:
         config.max_tokens = args.max_tokens
+    if args.d_state is not None:
+        config.d_state = args.d_state
+    if args.d_ff is not None:
+        config.d_ff_reduced = args.d_ff
+    if args.output_dir is not None:
+        config.output_dir = args.output_dir
     if args.no_compile:
         config.compile = False
 

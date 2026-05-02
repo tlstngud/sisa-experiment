@@ -1,0 +1,11 @@
+{
+  "niah_L512_transformer": 1.0,
+  "niah_L512_sisa": 1.0,
+  "niah_L512_mamba2": 0.825,
+  "niah_L1024_transformer": 1.0,
+  "niah_L1024_sisa": 1.0,
+  "niah_L1024_mamba2": 0.595,
+  "niah_L2048_transformer": 1.0,
+  "niah_L2048_sisa": 1.0,
+  "niah_L2048_mamba2": 0.01
+}

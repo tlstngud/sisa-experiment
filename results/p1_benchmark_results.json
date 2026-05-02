@@ -1,0 +1,402 @@
+{
+  "transformer_step1000": {
+    "model": "transformer",
+    "step": 1000,
+    "tokens": 524288000,
+    "lambada": 0.03473704638074908,
+    "niah": 0.615,
+    "hellaswag": 0.2526389165504879,
+    "arc_easy": 0.2833684210526316,
+    "winogrande": 0.48539857932123126
+  },
+  "transformer_step2000": {
+    "model": "transformer",
+    "step": 2000,
+    "tokens": 1048576000,
+    "lambada": 0.05880069862216185,
+    "niah": 0.78,
+    "hellaswag": 0.253734315873332,
+    "arc_easy": 0.296,
+    "winogrande": 0.48697711128650356
+  },
+  "transformer_step3000": {
+    "model": "transformer",
+    "step": 3000,
+    "tokens": 1572864000,
+    "lambada": 0.06209974771977489,
+    "niah": 0.935,
+    "hellaswag": 0.25562636924915355,
+    "arc_easy": 0.2985263157894737,
+    "winogrande": 0.49171270718232046
+  },
+  "transformer_step4000": {
+    "model": "transformer",
+    "step": 4000,
+    "tokens": 2097152000,
+    "lambada": 0.06035319231515622,
+    "niah": 0.935,
+    "hellaswag": 0.2581159131647082,
+    "arc_easy": 0.3044210526315789,
+    "winogrande": 0.505130228887135
+  },
+  "sisa_step1000": {
+    "model": "sisa",
+    "step": 1000,
+    "tokens": 524288000,
+    "lambada": 0.04812730448282554,
+    "niah": 1.0,
+    "hellaswag": 0.24586735710017923,
+    "arc_easy": 0.3044210526315789,
+    "winogrande": 0.5067087608524072
+  },
+  "sisa_step2000": {
+    "model": "sisa",
+    "step": 2000,
+    "tokens": 1048576000,
+    "lambada": 0.11139142247234621,
+    "niah": 1.0,
+    "hellaswag": 0.2538338976299542,
+    "arc_easy": 0.3317894736842105,
+    "winogrande": 0.5059194948697711
+  },
+  "sisa_step3000": {
+    "model": "sisa",
+    "step": 3000,
+    "tokens": 1572864000,
+    "lambada": 0.13099165534640014,
+    "niah": 1.0,
+    "hellaswag": 0.25114519020115517,
+    "arc_easy": 0.352,
+    "winogrande": 0.5201262825572218
+  },
+  "sisa_step4000": {
+    "model": "sisa",
+    "step": 4000,
+    "tokens": 2097152000,
+    "lambada": 0.14787502425771396,
+    "niah": 1.0,
+    "hellaswag": 0.261700856403107,
+    "arc_easy": 0.3646315789473684,
+    "winogrande": 0.5295974743488555
+  },
+  "mamba2_step1000": {
+    "model": "mamba2",
+    "step": 1000,
+    "tokens": 524288000,
+    "lambada": 0.009897147292839123,
+    "niah": 0.0,
+    "hellaswag": 0.23541127265484962,
+    "arc_easy": 0.31326315789473685,
+    "winogrande": 0.500394632991318
+  },
+  "mamba2_step2000": {
+    "model": "mamba2",
+    "step": 2000,
+    "tokens": 1048576000,
+    "lambada": 0.06889190762662527,
+    "niah": 0.065,
+    "hellaswag": 0.24716191993626768,
+    "arc_easy": 0.33642105263157895,
+    "winogrande": 0.505130228887135
+  },
+  "mamba2_step3000": {
+    "model": "mamba2",
+    "step": 3000,
+    "tokens": 1572864000,
+    "lambada": 0.10227052202600427,
+    "niah": 0.42,
+    "hellaswag": 0.2550288787094204,
+    "arc_easy": 0.3465263157894737,
+    "winogrande": 0.5059194948697711
+  },
+  "mamba3_step1000": {
+    "model": "mamba3",
+    "step": 1000,
+    "tokens": 524288000,
+    "lambada": 0.018241800892683874,
+    "niah": 0.0,
+    "hellaswag": 0.23999203345947023,
+    "arc_easy": 0.3098947368421053,
+    "winogrande": 0.5019731649565904
+  },
+  "mamba3_step2000": {
+    "model": "mamba3",
+    "step": 2000,
+    "tokens": 1048576000,
+    "lambada": 0.1005239666213856,
+    "niah": 0.61,
+    "hellaswag": 0.24885480979884486,
+    "arc_easy": 0.32210526315789473,
+    "winogrande": 0.5027624309392266
+  },
+  "transformer_step5000": {
+    "model": "transformer",
+    "step": 5000,
+    "tokens": 2621440000,
+    "lambada": 0.07219095672423831,
+    "niah": 0.985,
+    "hellaswag": 0.2615016928898626,
+    "arc_easy": 0.31326315789473685,
+    "winogrande": 0.5067087608524072
+  },
+  "transformer_step6000": {
+    "model": "transformer",
+    "step": 6000,
+    "tokens": 3145728000,
+    "lambada": 0.13079759363477586,
+    "niah": 1.0,
+    "hellaswag": 0.2539334793865764,
+    "arc_easy": 0.32842105263157895,
+    "winogrande": 0.5114443567482242
+  },
+  "transformer_step7000": {
+    "model": "transformer",
+    "step": 7000,
+    "tokens": 3670016000,
+    "lambada": 0.13856006209974772,
+    "niah": 1.0,
+    "hellaswag": 0.2522405895239992,
+    "arc_easy": 0.32926315789473687,
+    "winogrande": 0.5114443567482242
+  },
+  "transformer_step8000": {
+    "model": "transformer",
+    "step": 8000,
+    "tokens": 4194304000,
+    "lambada": 0.1383660003881234,
+    "niah": 1.0,
+    "hellaswag": 0.2550288787094204,
+    "arc_easy": 0.33389473684210524,
+    "winogrande": 0.516179952644041
+  },
+  "transformer_step9000": {
+    "model": "transformer",
+    "step": 9000,
+    "tokens": 4718592000,
+    "lambada": 0.138754123811372,
+    "niah": 1.0,
+    "hellaswag": 0.2531368253335989,
+    "arc_easy": 0.33221052631578946,
+    "winogrande": 0.5185477505919495
+  },
+  "transformer_step9537": {
+    "model": "transformer",
+    "step": 9537,
+    "tokens": 5000134656,
+    "lambada": 0.138754123811372,
+    "niah": 1.0,
+    "hellaswag": 0.253734315873332,
+    "arc_easy": 0.3330526315789474,
+    "winogrande": 0.5122336227308603
+  },
+  "sisa_step5000": {
+    "model": "sisa",
+    "step": 5000,
+    "tokens": 2621440000,
+    "lambada": 0.15389093731806713,
+    "niah": 1.0,
+    "hellaswag": 0.26249751045608444,
+    "arc_easy": 0.3562105263157895,
+    "winogrande": 0.516179952644041
+  },
+  "sisa_step6000": {
+    "model": "sisa",
+    "step": 6000,
+    "tokens": 3145728000,
+    "lambada": 0.1622355909179119,
+    "niah": 1.0,
+    "hellaswag": 0.261202947619996,
+    "arc_easy": 0.3511578947368421,
+    "winogrande": 0.5138121546961326
+  },
+  "sisa_step7000": {
+    "model": "sisa",
+    "step": 7000,
+    "tokens": 3670016000,
+    "lambada": 0.16320589947603337,
+    "niah": 1.0,
+    "hellaswag": 0.26638119896434975,
+    "arc_easy": 0.35957894736842105,
+    "winogrande": 0.5185477505919495
+  },
+  "sisa_step8000": {
+    "model": "sisa",
+    "step": 8000,
+    "tokens": 4194304000,
+    "lambada": 0.161653405783039,
+    "niah": 1.0,
+    "hellaswag": 0.2664807807209719,
+    "arc_easy": 0.35873684210526313,
+    "winogrande": 0.5138121546961326
+  },
+  "mamba2_step4000": {
+    "model": "mamba2",
+    "step": 4000,
+    "tokens": 2097152000,
+    "lambada": 0.10459926256549583,
+    "niah": 0.535,
+    "hellaswag": 0.2575184226249751,
+    "arc_easy": 0.352,
+    "winogrande": 0.5082872928176796
+  },
+  "mamba2_step5000": {
+    "model": "mamba2",
+    "step": 5000,
+    "tokens": 2621440000,
+    "lambada": 0.12051232291868814,
+    "niah": 0.71,
+    "hellaswag": 0.26538538139812784,
+    "arc_easy": 0.35957894736842105,
+    "winogrande": 0.5067087608524072
+  },
+  "mamba3_step3000": {
+    "model": "mamba3",
+    "step": 3000,
+    "tokens": 1572864000,
+    "lambada": 0.12031826120706385,
+    "niah": 0.965,
+    "hellaswag": 0.25423222465644296,
+    "arc_easy": 0.3271578947368421,
+    "winogrande": 0.516179952644041
+  },
+  "sisa_step9000": {
+    "model": "sisa",
+    "step": 9000,
+    "tokens": 4718592000,
+    "lambada": 0.1614593440714147,
+    "niah": 1.0,
+    "hellaswag": 0.2669786895040829,
+    "arc_easy": 0.35789473684210527,
+    "winogrande": 0.516179952644041
+  },
+  "sisa_step9536": {
+    "model": "sisa",
+    "step": 9536,
+    "tokens": 4999987200,
+    "lambada": 0.1612652823597904,
+    "niah": 1.0,
+    "hellaswag": 0.26687910774746065,
+    "arc_easy": 0.35789473684210527,
+    "winogrande": 0.5177584846093133
+  },
+  "mamba2_step6000": {
+    "model": "mamba2",
+    "step": 6000,
+    "tokens": 3145728000,
+    "lambada": 0.11643702697457792,
+    "niah": 0.805,
+    "hellaswag": 0.26309500099581756,
+    "arc_easy": 0.35578947368421054,
+    "winogrande": 0.510655090765588
+  },
+  "mamba3_step4000": {
+    "model": "mamba3",
+    "step": 4000,
+    "tokens": 2097152000,
+    "lambada": 0.12128856976518533,
+    "niah": 0.955,
+    "hellaswag": 0.25642302330213107,
+    "arc_easy": 0.33642105263157895,
+    "winogrande": 0.510655090765588
+  },
+  "mamba3_step5000": {
+    "model": "mamba3",
+    "step": 5000,
+    "tokens": 2621440000,
+    "lambada": 0.1391422472346206,
+    "niah": 0.86,
+    "hellaswag": 0.2581159131647082,
+    "arc_easy": 0.3406315789473684,
+    "winogrande": 0.5082872928176796
+  },
+  "mamba2_step7000": {
+    "model": "mamba2",
+    "step": 7000,
+    "tokens": 3670016000,
+    "lambada": 0.12419949543954978,
+    "niah": 0.785,
+    "hellaswag": 0.2650866361282613,
+    "arc_easy": 0.36336842105263156,
+    "winogrande": 0.5146014206787688
+  },
+  "mamba2_step8000": {
+    "model": "mamba2",
+    "step": 8000,
+    "tokens": 4194304000,
+    "lambada": 0.12614011255579274,
+    "niah": 0.81,
+    "hellaswag": 0.26618203545110536,
+    "arc_easy": 0.3616842105263158,
+    "winogrande": 0.5130228887134964
+  },
+  "mamba2_step9000": {
+    "model": "mamba2",
+    "step": 9000,
+    "tokens": 4718592000,
+    "lambada": 0.12730448282553852,
+    "niah": 0.825,
+    "hellaswag": 0.26548496315475006,
+    "arc_easy": 0.3616842105263158,
+    "winogrande": 0.5146014206787688
+  },
+  "mamba2_step9536": {
+    "model": "mamba2",
+    "step": 9536,
+    "tokens": 4999999488,
+    "lambada": 0.12672229769066562,
+    "niah": 0.825,
+    "hellaswag": 0.26488747261501694,
+    "arc_easy": 0.36378947368421055,
+    "winogrande": 0.5138121546961326
+  },
+  "mamba3_step6000": {
+    "model": "mamba3",
+    "step": 6000,
+    "tokens": 3145728000,
+    "lambada": 0.14709877741121677,
+    "niah": 0.965,
+    "hellaswag": 0.25980880302728543,
+    "arc_easy": 0.3448421052631579,
+    "winogrande": 0.5232833464877664
+  },
+  "mamba3_step7000": {
+    "model": "mamba3",
+    "step": 7000,
+    "tokens": 3670016000,
+    "lambada": 0.15311469047156995,
+    "niah": 0.975,
+    "hellaswag": 0.25980880302728543,
+    "arc_easy": 0.3456842105263158,
+    "winogrande": 0.5201262825572218
+  },
+  "mamba3_step8000": {
+    "model": "mamba3",
+    "step": 8000,
+    "tokens": 4194304000,
+    "lambada": 0.15330875218319426,
+    "niah": 0.99,
+    "hellaswag": 0.2606054570802629,
+    "arc_easy": 0.34442105263157896,
+    "winogrande": 0.5248618784530387
+  },
+  "mamba3_step9000": {
+    "model": "mamba3",
+    "step": 9000,
+    "tokens": 4718592000,
+    "lambada": 0.15447312245294004,
+    "niah": 0.99,
+    "hellaswag": 0.2604062935670185,
+    "arc_easy": 0.3486315789473684,
+    "winogrande": 0.5256511444356748
+  },
+  "mamba3_step9536": {
+    "model": "mamba3",
+    "step": 9536,
+    "tokens": 5000134656,
+    "lambada": 0.1550553075878129,
+    "niah": 0.99,
+    "hellaswag": 0.26020713005377416,
+    "arc_easy": 0.3494736842105263,
+    "winogrande": 0.5272296764009471
+  }
+}

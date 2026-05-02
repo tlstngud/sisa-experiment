@@ -1,0 +1,384 @@
+{
+  "p3_transformer_step1000": {
+    "model": "transformer",
+    "step": 1000,
+    "phase": 3,
+    "tokens": 524288000,
+    "lambada": 0.062293809431399186,
+    "niah": 1.0,
+    "hellaswag": 0.2463652658832902,
+    "arc_easy": 0.2905263157894737,
+    "winogrande": 0.5090765588003157
+  },
+  "p3_mamba2_step1000": {
+    "model": "mamba2",
+    "step": 1000,
+    "phase": 3,
+    "tokens": 524288000,
+    "lambada": 0.00038812342324859306,
+    "niah": 0.0,
+    "hellaswag": 0.23152758414658434,
+    "arc_easy": 0.2922105263157895,
+    "winogrande": 0.48697711128650356
+  },
+  "p3_transformer_step2000": {
+    "lambada": 0.1119736076072191,
+    "niah": 1.0,
+    "hellaswag": 0.24726150169288985,
+    "arc_easy": 0.3178947368421053,
+    "winogrande": 0.5035516969218626,
+    "model": "transformer",
+    "step": 2000,
+    "phase": 3
+  },
+  "p3_transformer_step3000": {
+    "lambada": 0.123035125169804,
+    "niah": 1.0,
+    "hellaswag": 0.2504481179047998,
+    "arc_easy": 0.33389473684210524,
+    "winogrande": 0.5027624309392266,
+    "model": "transformer",
+    "step": 3000,
+    "phase": 3
+  },
+  "p3_transformer_step4000": {
+    "lambada": 0.12827479138366,
+    "niah": 1.0,
+    "hellaswag": 0.2506472814180442,
+    "arc_easy": 0.327578947368421,
+    "winogrande": 0.5043409629044988,
+    "model": "transformer",
+    "step": 4000,
+    "phase": 3
+  },
+  "p3_transformer_step5000": {
+    "lambada": 0.13584319813700757,
+    "niah": 1.0,
+    "hellaswag": 0.253734315873332,
+    "arc_easy": 0.3313684210526316,
+    "winogrande": 0.5059194948697711,
+    "model": "transformer",
+    "step": 5000,
+    "phase": 3
+  },
+  "p3_transformer_step6000": {
+    "lambada": 0.12943916165340577,
+    "niah": 1.0,
+    "hellaswag": 0.25114519020115517,
+    "arc_easy": 0.3334736842105263,
+    "winogrande": 0.5059194948697711,
+    "model": "transformer",
+    "step": 6000,
+    "phase": 3
+  },
+  "p3_transformer_step7000": {
+    "lambada": 0.1337085193091403,
+    "niah": 1.0,
+    "hellaswag": 0.2528380800637323,
+    "arc_easy": 0.3263157894736842,
+    "winogrande": 0.5130228887134964,
+    "model": "transformer",
+    "step": 7000,
+    "phase": 3
+  },
+  "p3_transformer_step8000": {
+    "lambada": 0.1346788278672618,
+    "niah": 1.0,
+    "hellaswag": 0.2523401712806214,
+    "arc_easy": 0.33389473684210524,
+    "winogrande": 0.5098658247829518,
+    "model": "transformer",
+    "step": 8000,
+    "phase": 3
+  },
+  "p3_sisa_step1000": {
+    "lambada": 0.05414321754317873,
+    "niah": 0.735,
+    "hellaswag": 0.24437363075084645,
+    "arc_easy": 0.28421052631578947,
+    "winogrande": 0.5035516969218626,
+    "model": "sisa",
+    "step": 1000,
+    "phase": 3
+  },
+  "p3_sisa_step2000": {
+    "lambada": 0.11507859499320784,
+    "niah": 1.0,
+    "hellaswag": 0.24606652061342363,
+    "arc_easy": 0.31494736842105264,
+    "winogrande": 0.5074980268350434,
+    "model": "sisa",
+    "step": 2000,
+    "phase": 3
+  },
+  "p3_sisa_step3000": {
+    "lambada": 0.11080923733747332,
+    "niah": 1.0,
+    "hellaswag": 0.24785899223262298,
+    "arc_easy": 0.31873684210526315,
+    "winogrande": 0.5067087608524072,
+    "model": "sisa",
+    "step": 3000,
+    "phase": 3
+  },
+  "p3_sisa_step4000": {
+    "lambada": 0.11080923733747332,
+    "niah": 1.0,
+    "hellaswag": 0.24975104560844452,
+    "arc_easy": 0.3237894736842105,
+    "winogrande": 0.5082872928176796,
+    "model": "sisa",
+    "step": 4000,
+    "phase": 3
+  },
+  "p3_sisa_step5000": {
+    "lambada": 0.12051232291868814,
+    "niah": 1.0,
+    "hellaswag": 0.2508464449312886,
+    "arc_easy": 0.3351578947368421,
+    "winogrande": 0.510655090765588,
+    "model": "sisa",
+    "step": 5000,
+    "phase": 3
+  },
+  "p3_mamba2_step2000": {
+    "lambada": 0.011837764409082088,
+    "niah": 0.0,
+    "hellaswag": 0.2371041625174268,
+    "arc_easy": 0.3162105263157895,
+    "winogrande": 0.4940805051302289,
+    "model": "mamba2",
+    "step": 2000,
+    "phase": 3
+  },
+  "p3_mamba2_step3000": {
+    "lambada": 0.03182612070638463,
+    "niah": 0.0,
+    "hellaswag": 0.24128659629555865,
+    "arc_easy": 0.32,
+    "winogrande": 0.5067087608524072,
+    "model": "mamba2",
+    "step": 3000,
+    "phase": 3
+  },
+  "p3_mamba2_step4000": {
+    "lambada": 0.046186687366582574,
+    "niah": 0.0,
+    "hellaswag": 0.24427404899422425,
+    "arc_easy": 0.33094736842105266,
+    "winogrande": 0.5074980268350434,
+    "model": "mamba2",
+    "step": 4000,
+    "phase": 3
+  },
+  "p3_mamba2_step5000": {
+    "lambada": 0.046768872501455463,
+    "niah": 0.0,
+    "hellaswag": 0.24656442939653456,
+    "arc_easy": 0.32926315789473687,
+    "winogrande": 0.5090765588003157,
+    "model": "mamba2",
+    "step": 5000,
+    "phase": 3
+  },
+  "p3_mamba2_step6000": {
+    "lambada": 0.05297884727343295,
+    "niah": 0.0,
+    "hellaswag": 0.2484564827723561,
+    "arc_easy": 0.33221052631578946,
+    "winogrande": 0.5074980268350434,
+    "model": "mamba2",
+    "step": 6000,
+    "phase": 3
+  },
+  "p3_mamba2_step7000": {
+    "lambada": 0.05996506889190763,
+    "niah": 0.0,
+    "hellaswag": 0.24865564628560047,
+    "arc_easy": 0.3317894736842105,
+    "winogrande": 0.5169692186266772,
+    "model": "mamba2",
+    "step": 7000,
+    "phase": 3
+  },
+  "p3_mamba3_step1000": {
+    "lambada": 0.004269357655734524,
+    "niah": 0.0,
+    "hellaswag": 0.2439753037243577,
+    "arc_easy": 0.3077894736842105,
+    "winogrande": 0.4956590370955012,
+    "model": "mamba3",
+    "step": 1000,
+    "phase": 3
+  },
+  "p3_mamba3_step2000": {
+    "lambada": 0.06753347564525519,
+    "niah": 0.0,
+    "hellaswag": 0.24297948615813583,
+    "arc_easy": 0.3145263157894737,
+    "winogrande": 0.500394632991318,
+    "model": "mamba3",
+    "step": 2000,
+    "phase": 3
+  },
+  "p3_mamba3_step3000": {
+    "lambada": 0.08596933824956336,
+    "niah": 0.005,
+    "hellaswag": 0.2504481179047998,
+    "arc_easy": 0.3208421052631579,
+    "winogrande": 0.5019731649565904,
+    "model": "mamba3",
+    "step": 3000,
+    "phase": 3
+  },
+  "p3_mamba3_step4000": {
+    "lambada": 0.11449640985833495,
+    "niah": 0.0,
+    "hellaswag": 0.25034853614817765,
+    "arc_easy": 0.33094736842105266,
+    "winogrande": 0.5035516969218626,
+    "model": "mamba3",
+    "step": 4000,
+    "phase": 3
+  },
+  "p3_mamba3_step5000": {
+    "lambada": 0.11993013778381525,
+    "niah": 0.5,
+    "hellaswag": 0.24716191993626768,
+    "arc_easy": 0.3372631578947368,
+    "winogrande": 0.5153906866614049,
+    "model": "mamba3",
+    "step": 5000,
+    "phase": 3
+  },
+  "p3_mamba3_step6000": {
+    "lambada": 0.12516980399767125,
+    "niah": 0.545,
+    "hellaswag": 0.24975104560844452,
+    "arc_easy": 0.33431578947368423,
+    "winogrande": 0.5067087608524072,
+    "model": "mamba3",
+    "step": 6000,
+    "phase": 3
+  },
+  "p3_mamba2_step9000": {
+    "lambada": 0.05647195808267029,
+    "niah": 0.0,
+    "hellaswag": 0.24716191993626768,
+    "arc_easy": 0.33094736842105266,
+    "winogrande": 0.5059194948697711,
+    "model": "mamba2",
+    "step": 9000,
+    "phase": 3
+  },
+  "p3_mamba2_step9536": {
+    "lambada": 0.05647195808267029,
+    "niah": 0.0,
+    "hellaswag": 0.2477594104760008,
+    "arc_easy": 0.3296842105263158,
+    "winogrande": 0.5082872928176796,
+    "model": "mamba2",
+    "step": 9536,
+    "phase": 3
+  },
+  "p3_mamba3_step8000": {
+    "lambada": 0.12730448282553852,
+    "niah": 0.65,
+    "hellaswag": 0.2508464449312886,
+    "arc_easy": 0.33810526315789474,
+    "winogrande": 0.5130228887134964,
+    "model": "mamba3",
+    "step": 8000,
+    "phase": 3
+  },
+  "p3_mamba3_step9000": {
+    "lambada": 0.1274985445371628,
+    "niah": 0.635,
+    "hellaswag": 0.24985062736506672,
+    "arc_easy": 0.33978947368421053,
+    "winogrande": 0.5122336227308603,
+    "model": "mamba3",
+    "step": 9000,
+    "phase": 3
+  },
+  "p3_mamba3_step9536": {
+    "lambada": 0.1274985445371628,
+    "niah": 0.635,
+    "hellaswag": 0.2509460266879108,
+    "arc_easy": 0.3393684210526316,
+    "winogrande": 0.510655090765588,
+    "model": "mamba3",
+    "step": 9536,
+    "phase": 3
+  },
+  "p3_sisa_step6000": {
+    "lambada": 0.12225887832330681,
+    "niah": 1.0,
+    "hellaswag": 0.24965146385182235,
+    "arc_easy": 0.3313684210526316,
+    "winogrande": 0.510655090765588,
+    "model": "sisa",
+    "step": 6000,
+    "phase": 3
+  },
+  "p3_sisa_step7000": {
+    "lambada": 0.12458761886279837,
+    "niah": 1.0,
+    "hellaswag": 0.24995020912168892,
+    "arc_easy": 0.3393684210526316,
+    "winogrande": 0.5027624309392266,
+    "model": "sisa",
+    "step": 7000,
+    "phase": 3
+  },
+  "p3_sisa_step8000": {
+    "lambada": 0.12458761886279837,
+    "niah": 1.0,
+    "hellaswag": 0.25054769966142204,
+    "arc_easy": 0.33642105263157895,
+    "winogrande": 0.5090765588003157,
+    "model": "sisa",
+    "step": 8000,
+    "phase": 3
+  },
+  "p3_sisa_step9000": {
+    "lambada": 0.12672229769066562,
+    "niah": 1.0,
+    "hellaswag": 0.2509460266879108,
+    "arc_easy": 0.3351578947368421,
+    "winogrande": 0.5122336227308603,
+    "model": "sisa",
+    "step": 9000,
+    "phase": 3
+  },
+  "p3_transformer_step9536": {
+    "lambada": 0.1342907044440132,
+    "niah": 1.0,
+    "hellaswag": 0.25184226249751046,
+    "arc_easy": 0.3313684210526316,
+    "winogrande": 0.5130228887134964,
+    "model": "transformer",
+    "step": 9536,
+    "phase": 3
+  },
+  "p3_sisa_step9536": {
+    "lambada": 0.1274985445371628,
+    "niah": 1.0,
+    "hellaswag": 0.2509460266879108,
+    "arc_easy": 0.33473684210526317,
+    "winogrande": 0.5074980268350434,
+    "model": "sisa",
+    "step": 9536,
+    "phase": 3
+  },
+  "p3_transformer_step9000": {
+    "lambada": 0.1339025810207646,
+    "niah": 1.0,
+    "hellaswag": 0.2523401712806214,
+    "arc_easy": 0.3334736842105263,
+    "winogrande": 0.5114443567482242,
+    "model": "transformer",
+    "step": 9000,
+    "phase": 3
+  }
+}

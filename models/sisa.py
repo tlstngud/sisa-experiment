@@ -131,11 +131,16 @@ class SISALayer(nn.Module):
         K_aug = torch.cat([k, s * B_bar], dim=-1)  # (B, H, L, d_h + d_state)
 
         # ═══════ Single Attention ═══════
-        Y = F.scaled_dot_product_attention(
-            Q_aug, K_aug, v,
-            scale=1.0 / math.sqrt(d_h),  # MUST be d_h, not augmented_dim
-            is_causal=True,
-        )  # (B, H, L, d_h)
+        # Use memory-efficient attention backend (handles Q/K dim != V dim)
+        with torch.nn.attention.sdpa_kernel([
+            torch.nn.attention.SDPBackend.EFFICIENT_ATTENTION,
+            torch.nn.attention.SDPBackend.MATH,
+        ]):
+            Y = F.scaled_dot_product_attention(
+                Q_aug, K_aug, v,
+                scale=1.0 / math.sqrt(d_h),  # MUST be d_h, not augmented_dim
+                is_causal=True,
+            )  # (B, H, L, d_h)
 
         Y = Y.transpose(1, 2).reshape(B, L, D)
         x = self.W_O(Y) + residual

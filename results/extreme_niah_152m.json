@@ -1,0 +1,74 @@
+{
+  "L256_transformer": {
+    "score": 1.0,
+    "status": "OK"
+  },
+  "L256_mamba2": {
+    "score": 0.88,
+    "status": "OK"
+  },
+  "L512_transformer": {
+    "score": 1.0,
+    "status": "OK"
+  },
+  "L512_mamba2": {
+    "score": 0.81,
+    "status": "OK"
+  },
+  "L1024_transformer": {
+    "score": 1.0,
+    "status": "OK"
+  },
+  "L1024_mamba2": {
+    "score": 0.61,
+    "status": "OK"
+  },
+  "L1536_transformer": {
+    "score": 1.0,
+    "status": "OK"
+  },
+  "L1536_mamba2": {
+    "score": 0.39,
+    "status": "OK"
+  },
+  "L2048_transformer": {
+    "score": 0.82,
+    "status": "OK"
+  },
+  "L2048_mamba2": {
+    "score": 0.21,
+    "status": "OK"
+  },
+  "L3072_transformer": {
+    "score": 0.0,
+    "status": "OK"
+  },
+  "L3072_mamba2": {
+    "score": 0.09,
+    "status": "OK"
+  },
+  "L4096_transformer": {
+    "score": 0.0,
+    "status": "OK"
+  },
+  "L4096_mamba2": {
+    "score": 0.0,
+    "status": "OK"
+  },
+  "L8192_transformer": {
+    "score": 0.0,
+    "status": "OK"
+  },
+  "L8192_mamba2": {
+    "score": 0.0,
+    "status": "OK"
+  },
+  "L16384_transformer": {
+    "score": 0.0,
+    "status": "OK"
+  },
+  "L16384_mamba2": {
+    "score": 0.0,
+    "status": "OK"
+  }
+}

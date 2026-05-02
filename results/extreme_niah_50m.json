@@ -1,0 +1,164 @@
+{
+  "L256": {
+    "transformer": {
+      "score": 1.0,
+      "status": "OK"
+    },
+    "sisa": {
+      "score": 1.0,
+      "status": "OK"
+    },
+    "mamba2": {
+      "score": 0.0,
+      "status": "OK"
+    },
+    "mamba3": {
+      "score": 0.95,
+      "status": "OK"
+    }
+  },
+  "L512": {
+    "transformer": {
+      "score": 1.0,
+      "status": "OK"
+    },
+    "sisa": {
+      "score": 1.0,
+      "status": "OK"
+    },
+    "mamba2": {
+      "score": 0.0,
+      "status": "OK"
+    },
+    "mamba3": {
+      "score": 0.68,
+      "status": "OK"
+    }
+  },
+  "L1024": {
+    "transformer": {
+      "score": 1.0,
+      "status": "OK"
+    },
+    "sisa": {
+      "score": 1.0,
+      "status": "OK"
+    },
+    "mamba2": {
+      "score": 0.0,
+      "status": "OK"
+    },
+    "mamba3": {
+      "score": 0.09,
+      "status": "OK"
+    }
+  },
+  "L1536": {
+    "transformer": {
+      "score": 1.0,
+      "status": "OK"
+    },
+    "sisa": {
+      "score": 1.0,
+      "status": "OK"
+    },
+    "mamba2": {
+      "score": 0.0,
+      "status": "OK"
+    },
+    "mamba3": {
+      "score": 0.0,
+      "status": "OK"
+    }
+  },
+  "L2048": {
+    "transformer": {
+      "score": 0.88,
+      "status": "OK"
+    },
+    "sisa": {
+      "score": 0.83,
+      "status": "OK"
+    },
+    "mamba2": {
+      "score": 0.0,
+      "status": "OK"
+    },
+    "mamba3": {
+      "score": 0.0,
+      "status": "OK"
+    }
+  },
+  "L3072": {
+    "transformer": {
+      "score": 0.0,
+      "status": "OK"
+    },
+    "sisa": {
+      "score": 0.04,
+      "status": "OK"
+    },
+    "mamba2": {
+      "score": 0.0,
+      "status": "OK"
+    },
+    "mamba3": {
+      "score": 0.0,
+      "status": "OK"
+    }
+  },
+  "L4096": {
+    "transformer": {
+      "score": 0.0,
+      "status": "OK"
+    },
+    "sisa": {
+      "score": 0.0,
+      "status": "OK"
+    },
+    "mamba2": {
+      "score": 0.0,
+      "status": "OK"
+    },
+    "mamba3": {
+      "score": 0.0,
+      "status": "OK"
+    }
+  },
+  "L8192": {
+    "transformer": {
+      "score": 0.0,
+      "status": "OK"
+    },
+    "sisa": {
+      "score": 0.0,
+      "status": "OK"
+    },
+    "mamba2": {
+      "score": 0.0,
+      "status": "OK"
+    },
+    "mamba3": {
+      "score": 0.0,
+      "status": "OK"
+    }
+  },
+  "L16384": {
+    "transformer": {
+      "score": 0.0,
+      "status": "OK"
+    },
+    "sisa": {
+      "score": 0.0,
+      "status": "OK"
+    },
+    "mamba2": {
+      "score": 0.0,
+      "status": "OK"
+    },
+    "mamba3": {
+      "score": 0.0,
+      "status": "OK"
+    }
+  }
+}
