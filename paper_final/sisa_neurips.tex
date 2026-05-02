@@ -486,9 +486,9 @@ SISA는 Step 2000(21\%)에서 13.9\%를 기록하며, 이는 Transformer 최종(
 & Mamba-3 & 12.7 & 63.5 & 25.1 & \textbf{33.9} & 51.1 \\
 \midrule
 \multirow{4}{*}{\textbf{152M}} & Transformer & 13.9 & \textbf{100.0} & 25.4 & 33.3 & 51.2 \\
-& \textbf{SISA $d_s = 16$} (best) & \textbf{17.3} & \textbf{100.0} & \textbf{26.9} & 34.7 & \textbf{52.5} \\
+& \textbf{SISA $d_s = 16$} (best) & \textbf{17.3} & \textbf{100.0} & \textbf{26.9} & 34.7 & \underline{52.5} \\
 & Mamba-2 & 12.7 & 82.5 & 26.5 & \textbf{36.4} & 51.4 \\
-& Mamba-3 & 15.5 & 99.0 & 26.0 & 34.9 & 52.7 \\
+& Mamba-3 & 15.5 & 99.0 & 26.0 & 34.9 & \textbf{52.7} \\
 \midrule
 \multirow{7}{*}{\textbf{369M}} & Transformer & 15.4 & \textbf{100.0} & 26.5 & 35.1 & \textbf{53.3} \\
 & SISA $d_s = 32$ (paper) & 15.4 & 99.5 & 26.4 & 34.6 & 51.9 \\
@@ -611,6 +611,7 @@ v1 ($\lambda$ bf16, 고정 0.31) & 4.8 & 11.1 & 13.1 & 15.4 & 16.1 \\
 Step 1000에서 +74\%의 차이가 발생한다. 주목할 점은 v1($\lambda$ 고정)에서도 Transformer(13.9\%) 대비 의미 있는 개선(16.1\%)이 관찰된다는 것이다. 이는 SSM bias의 \emph{구조 자체}가 유용함을 의미하며, $\lambda$의 적응적 학습은 이 위에 추가적인 +1.6\%p를 제공한다.
 
 \subsection{벤치마크별 아키텍처 강점 분석}
+\label{sec:bench_analysis}
 
 SISA가 전 벤치마크 1위가 아닌 점에 주목한다.
 
