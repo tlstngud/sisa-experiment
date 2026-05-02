@@ -734,7 +734,7 @@ SSM 채널 차원 $d_s \in \{16, 32, 64, 128\}$에 대해 세 가지 모델 규�
 
 \begin{table}[h]
 \centering\small
-\caption{50M 규모 $d_s$ ablation (step 9,000). $d_s = 32$는 paper 원본 데이터, $d_s \in \{16, 64, 128\}$는 본 연구.}
+\caption{50M 규모 $d_s$ ablation. Transformer 및 본 연구 retrain ($d_s \in \{16, 64, 128\}$)은 step 9,000, paper $d_s = 32$는 최종 (5B tokens).}
 \label{tab:ds_50m}
 \begin{tabular}{lrcccccc}
 \toprule
@@ -756,7 +756,7 @@ Transformer & --- & 2048 & 13.39 & 100.0 & 25.2 & 33.4 & 51.1 \\
 
 \begin{table}[h]
 \centering\small
-\caption{152M 규모 $d_s$ ablation (step 9,000). $d_s = 32$는 paper 원본, $d_s \in \{16, 64, 128\}$는 본 연구.}
+\caption{152M 규모 $d_s$ ablation. 본 연구 retrain ($d_s \in \{16, 64, 128\}$)은 step 9,000, Transformer 및 paper $d_s = 32$는 최종 (5B tokens).}
 \label{tab:ds_152m}
 \begin{tabular}{lrcccccc}
 \toprule
