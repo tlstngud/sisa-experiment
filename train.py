@@ -49,6 +49,10 @@ def parse_args():
     parser.add_argument("--d-state", type=int, default=None)
     parser.add_argument("--d-ff", type=int, default=None)
     parser.add_argument("--output-dir", type=str, default=None)
+    parser.add_argument("--data-dir", type=str, default=None,
+                       help="Override config.data_cache_dir (e.g. /data/sisa_tokens_phase2 for 22B dataset)")
+    parser.add_argument("--run-name", type=str, default=None,
+                       help="Override config.wandb_run_name (used as ckpt subfolder)")
     return parser.parse_args()
 
 
@@ -174,6 +178,10 @@ def main():
         config.d_ff_reduced = args.d_ff
     if args.output_dir is not None:
         config.output_dir = args.output_dir
+    if args.data_dir is not None:
+        config.data_cache_dir = args.data_dir
+    if args.run_name is not None:
+        config.wandb_run_name = args.run_name
     if args.no_compile:
         config.compile = False
 
@@ -248,7 +256,18 @@ def main():
     t_start = time.time()
     log_tokens_start = tokens_seen
 
-    for input_ids, labels in train_loader:
+    # Multi-epoch: cycle the dataloader (re-shuffled each pass) until max_tokens.
+    # LocalTokenDataset caps one pass at the dataset size (5.5B); without cycling
+    # training stops at 1 epoch even if max_tokens=20B (and the cosine, scheduled
+    # for 20B, never anneals). Cycling enables 20B = ~3.6 epochs of the 5.5B data,
+    # matching the sisa2 repo's loop behaviour. The `tokens_seen >= max_tokens`
+    # break below terminates it.
+    def _iter_epochs(loader):
+        while True:
+            for batch in loader:
+                yield batch
+
+    for input_ids, labels in _iter_epochs(train_loader):
         input_ids = input_ids.to(device, non_blocking=True)
         labels = labels.to(device, non_blocking=True)
 

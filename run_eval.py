@@ -6,6 +6,7 @@ Runs LAMBADA, HellaSwag, PIQA, ARC-Easy, WinoGrande via lm-eval harness.
 
 import argparse
 import torch
+torch.backends.cuda.enable_cudnn_sdp(False)  # torch2.11/cu130 cuDNN SDPA 백엔드 깨짐 → EFFICIENT/MATH로 폴백 (train.py와 동일)
 import torch.nn.functional as F
 from pathlib import Path
 from transformers import AutoTokenizer
@@ -172,7 +173,7 @@ def main():
         results = evaluator.simple_evaluate(
             model=wrapper,
             tasks=args.tasks,
-            batch_size=1,
+            batch_size=32,
             task_manager=task_manager,
         )
 
